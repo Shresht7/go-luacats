@@ -133,20 +133,6 @@ func GenerateFileToFile(source, target string) (err error) {
 	return nil
 }
 
-// Writes LuaCATS definitions for one Go source file
-func GenerateToWriter(source string, w io.Writer) error {
-	output, err := GenerateSource(source)
-	if err != nil {
-		return err
-	}
-
-	if _, err := io.Copy(w, output); err != nil {
-		return fmt.Errorf("write LuaCATS output: %w", err)
-	}
-
-	return nil
-}
-
 // Generates LuaCATS output for a Go source file into a buffer
 func GenerateSource(source string) (*bytes.Buffer, error) {
 
