@@ -93,21 +93,35 @@ func Generate(source string, target string) error {
 
 // Writes LuaCATS definitions for one Go source file
 func GenerateToWriter(source string, w io.Writer) error {
-	fset := token.NewFileSet()
-
-	file, err := parser.ParseFile(fset, source, nil, parser.ParseComments)
+	output, err := generateSource(source)
 	if err != nil {
-		return fmt.Errorf("parse %s: %w", source, err)
+		return err
 	}
 
-	var output bytes.Buffer
-	processDecls(file.Decls, &output)
-
-	if _, err := io.Copy(w, &output); err != nil {
+	if _, err := io.Copy(w, output); err != nil {
 		return fmt.Errorf("write LuaCATS output: %w", err)
 	}
 
 	return nil
+}
+
+// Generates LuaCATS output for a Go source file into a buffer
+func generateSource(source string) (*bytes.Buffer, error) {
+	// Crete a new FileSet for position information. Positions are relative to the fset
+	fset := token.NewFileSet()
+
+	// Parse the Go source file into an AST
+	file, err := parser.ParseFile(fset, source, nil, parser.ParseComments)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", source, err)
+	}
+
+	// Process the AST and generate LuaCATS output
+	var output bytes.Buffer
+	processDecls(file.Decls, &output)
+
+	// Return the generated output buffer
+	return &output, nil
 }
 
 // Handles the extraction and generation process
