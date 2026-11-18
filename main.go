@@ -52,49 +52,6 @@ func main() {
 	}
 }
 
-// Generate LuaCATS docs for Go structs
-func generateStructDocs(d *ast.GenDecl) {
-	if d.Tok == token.TYPE {
-		for _, spec := range d.Specs {
-			if typeSpec, ok := spec.(*ast.TypeSpec); ok {
-
-				// Only process exported public structs
-				if !typeSpec.Name.IsExported() {
-					continue
-				}
-
-				if structType, ok := typeSpec.Type.(*ast.StructType); ok {
-
-					// Struct docstrings
-					if d.Doc != nil {
-						doc := strings.TrimSpace(d.Doc.Text())
-						for _, line := range strings.Split(doc, "\n") {
-							fmt.Printf("--- %s\n", line)
-						}
-					}
-
-					// Create ---@class doc for the struct
-					fmt.Printf("---@class %s\n", typeSpec.Name.Name)
-
-					for _, field := range structType.Fields.List {
-						// A field can have multiple declarations (e.g. X, Y int)
-						for _, name := range field.Names {
-							if name.IsExported() {
-								// Create ---@field doc for each field
-								fmt.Printf("---@field %s %s\n", name.Name, goTypeToLua(field.Type))
-							}
-						}
-					}
-					// Instantiate the local table so that we can attach methods to it
-					fmt.Printf("local %s = {}\n\n", typeSpec.Name.Name)
-
-				}
-
-			}
-		}
-	}
-}
-
 // Generate LuaCATS docs for methods and functions
 func generateFuncDocs(d *ast.FuncDecl) {
 	if d.Name.IsExported() {
