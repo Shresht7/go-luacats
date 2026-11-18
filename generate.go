@@ -41,9 +41,9 @@ func Generate(filename string, src io.Reader, dst io.Writer) error {
 	return nil
 }
 
-// GenerateFile reads a Go source file and writes its LuaCATS definitions out to a writer
+// GenerateFromFile reads a Go source file and writes its LuaCATS definitions out to a writer
 // It closes the source file but does not close dst
-func GenerateFile(source string, dst io.Writer) error {
+func GenerateFromFile(source string, dst io.Writer) error {
 
 	// Open the source file for reading
 	file, err := os.Open(source)

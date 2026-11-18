@@ -71,7 +71,7 @@ func TestGenerateFile(t *testing.T) {
 	}
 
 	var output bytes.Buffer
-	if err := GenerateFile(source, &output); err != nil {
+	if err := GenerateFromFile(source, &output); err != nil {
 		t.Fatal(err)
 	}
 
@@ -85,7 +85,7 @@ func TestGenerateFile(t *testing.T) {
 func TestGenerateFileReturnsOpenError(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "missing.go")
 
-	err := GenerateFile(source, &bytes.Buffer{})
+	err := GenerateFromFile(source, &bytes.Buffer{})
 	if !errors.Is(err, os.ErrNotExist) {
 		t.Fatal(err)
 	}
