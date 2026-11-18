@@ -94,7 +94,7 @@ import (
 )
 
 func main() {
-    luacats.Generate("path/to/file.go", "output.lua")
+    err := luacats.Generate("path/to/file.go", "output.lua")
     if err != nil {
         log.Fatal(err)
     }
