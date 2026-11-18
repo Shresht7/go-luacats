@@ -9,6 +9,36 @@ import (
 	"io"
 )
 
+// Reads one Go source file and generates LuaCATS definitions.
+// filename is only used to identify the source in parser errors.
+func Generate(filename string, src io.Reader, dst io.Writer) error {
+
+	// Check for nil source reader
+	if src == nil {
+		return fmt.Errorf("source reader is nil")
+	}
+
+	// Crete a new FileSet for position information. Positions are relative to the fset
+	fset := token.NewFileSet()
+
+	// Parse the file into an AST
+	file, err := parser.ParseFile(fset, filename, src, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", filename, err)
+	}
+
+	// Process the AST and generate LuaCATS output
+	var output bytes.Buffer
+	processDecls(file.Decls, &output)
+
+	// Write output buffer to the destination
+	if _, err = io.Copy(dst, &output); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Writes LuaCATS definitions for one Go source file
 func GenerateToWriter(source string, w io.Writer) error {
 	output, err := GenerateSource(source)
