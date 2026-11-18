@@ -64,6 +64,33 @@ func TestGenerateDoesNotWriteOnParseError(t *testing.T) {
 	}
 }
 
+func TestGenerateFile(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "example.go")
+	if err := os.WriteFile(source, []byte("package example\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateFile(source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	got := output.String()
+	want := "---@meta\n\n"
+	if got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestGenerateFileReturnsOpenError(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "missing.go")
+
+	err := GenerateFile(source, &bytes.Buffer{})
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatal(err)
+	}
+}
+
 func TestGenerateToWriter(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "point.go")
 	goSource := `package example

@@ -41,6 +41,31 @@ func Generate(filename string, src io.Reader, dst io.Writer) error {
 	return nil
 }
 
+// GenerateFile reads a Go source file and writes its LuaCATS definitions out to a writer
+// It closes the source file but does not close dst
+func GenerateFile(source string, dst io.Writer) error {
+
+	// Open the source file for reading
+	file, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", source, err)
+	}
+
+	// Delegate to Generate the LuaCATS output in the dst writer
+	generateErr := Generate(source, file, dst)
+	closeErr := file.Close()
+
+	// Check for errors from generate and close
+	if generateErr != nil {
+		return generateErr
+	}
+	if closeErr != nil {
+		return fmt.Errorf("close %s: %w", source, closeErr)
+	}
+
+	return nil
+}
+
 // Writes LuaCATS definitions for one Go source file
 func GenerateToWriter(source string, w io.Writer) error {
 	output, err := GenerateSource(source)
