@@ -87,6 +87,18 @@ func goTypeToLua(t ast.Expr) string {
 	case *ast.MapType:
 		return fmt.Sprintf("table<%s,%s>", goTypeToLua(t.Key), goTypeToLua(t.Value))
 
+	// Pointers
+	case *ast.StarExpr:
+		return goTypeToLua(t.X) // Pointers are just the type itself in LuaCATS (drop the *)
+
+	// Selector expressions (e.g. pkg.Type)
+	case *ast.SelectorExpr:
+		return goTypeToLua(t.Sel) // Drop the pkg prefix
+
+	// Interface types
+	case *ast.InterfaceType:
+		return "any"
+
 	// Fallback to "any" type
 	default:
 		return "any"
