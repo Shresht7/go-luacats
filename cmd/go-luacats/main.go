@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/Shresht7/go-luacats"
 )
 
 func main() {
@@ -21,7 +23,7 @@ func main() {
 	}
 
 	// Generate LuaCATS files
-	err := Generate(source, target)
+	err := luacats.Generate(source, target)
 	if err != nil {
 		log.Fatal(err)
 	}
