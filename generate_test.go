@@ -91,6 +91,79 @@ func TestGenerateFileReturnsOpenError(t *testing.T) {
 	}
 }
 
+func TestGenerateFileToFile(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "example.go")
+	target := filepath.Join(dir, "example.lua")
+	if err := os.WriteFile(source, []byte("package example\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("old output"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := GenerateFileToFile(source, target); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != "---@meta\n\n" {
+		t.Fatalf("got %q, want LuaCATS output", string(got))
+	}
+
+}
+
+func TestGenerateFileToFilePreservesTargetOnParseError(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "bad.go")
+	target := filepath.Join(dir, "bad.lua")
+	if err := os.WriteFile(source, []byte("package example\ntype Broken struct {\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("existing output"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := GenerateFileToFile(source, target); err == nil {
+		t.Fatal("expected a parse error")
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != "existing output" {
+		t.Fatalf("target changed: %q", string(got))
+	}
+}
+
+func TestGenerateFileToFileRejectsSourceAsTarget(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "example.go")
+	original := "package example\n"
+
+	if err := os.WriteFile(source, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := GenerateFileToFile(source, source); err == nil {
+		t.Fatal("expected an error for identical source and target")
+	}
+
+	got, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != original {
+		t.Fatalf("soruce changed: %q", string(got))
+	}
+}
+
 func TestGenerateToWriter(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "point.go")
 	goSource := `package example

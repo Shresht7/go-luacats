@@ -66,6 +66,73 @@ func GenerateFile(source string, dst io.Writer) error {
 	return nil
 }
 
+// GenerateFileToFile reads a Go source file and writes its LuaCATS
+// definitions to a target file. An existing target will be overwritten.
+func GenerateFileToFile(source, target string) (err error) {
+
+	// Open the source file for reading
+	input, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", source, err)
+	}
+
+	// Defer closing the input file
+	defer func() {
+		if closeErr := input.Close(); err == nil && closeErr != nil {
+			err = fmt.Errorf("close %s: %w", source, closeErr)
+		}
+	}()
+
+	// Get source info for later comparison
+	sourceInfo, err := input.Stat()
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", source, err)
+	}
+
+	// Generate LuaCATS definitions into a buffer
+	var output bytes.Buffer
+	if err := Generate(source, input, &output); err != nil {
+		return err
+	}
+
+	// Open target without truncating so we can check the actual destination file
+	dest, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		return fmt.Errorf("open %s: %w", target, err)
+	}
+
+	// Defer closing the target file
+	defer func() {
+		if closeErr := dest.Close(); err == nil && closeErr != nil {
+			err = fmt.Errorf("close %s: %w", target, closeErr)
+		}
+	}()
+
+	// Get target info for comparison
+	destInfo, err := dest.Stat()
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", target, err)
+	}
+
+	// If source and target are the same, error out
+	if os.SameFile(sourceInfo, destInfo) {
+		return fmt.Errorf("source and target are the same file!")
+	}
+
+	// Truncate the target before writing
+	if err := dest.Truncate(0); err != nil {
+		return fmt.Errorf("truncate %s: %w", target, err)
+	}
+
+	// Write buffer to target file
+	if _, err := io.Copy(dest, &output); err != nil {
+		return fmt.Errorf("write %s: %w", target, err)
+	}
+
+	// All done
+	return nil
+}
+
 // Writes LuaCATS definitions for one Go source file
 func GenerateToWriter(source string, w io.Writer) error {
 	output, err := GenerateSource(source)
