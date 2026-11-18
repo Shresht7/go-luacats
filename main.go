@@ -28,6 +28,9 @@ func main() {
 	// Crete a new FileSet for position information. Positions are relative to the fset
 	fset := token.NewFileSet()
 
+	// Declare the file as meta
+	fmt.Printf("---@meta\n\n")
+
 	// Parse the Go file (including comments)
 	node, err := parser.ParseFile(fset, sourceFile, nil, parser.ParseComments)
 	if err != nil {
@@ -40,13 +43,7 @@ func main() {
 
 		// Generic Declarations: Types, Structs, Consts, Vars
 		case *ast.GenDecl:
-			if d.Tok == token.TYPE {
-				for _, spec := range d.Specs {
-					if typeSpec, ok := spec.(*ast.TypeSpec); ok {
-						fmt.Printf("TYPE: %s\n", typeSpec.Name.Name)
-					}
-				}
-			}
+			generateStructDocs(d)
 		// Function Declarations: (standalone functions and methods)
 		case *ast.FuncDecl:
 			if d.Recv != nil {
@@ -57,6 +54,41 @@ func main() {
 				fmt.Printf("FUNC: %s\n", d.Name.Name)
 			}
 
+		}
+	}
+}
+
+// Generate LuaCATS docs for Go structs
+func generateStructDocs(d *ast.GenDecl) {
+	if d.Tok == token.TYPE {
+		for _, spec := range d.Specs {
+			if typeSpec, ok := spec.(*ast.TypeSpec); ok {
+
+				// Only process exported public structs
+				if !typeSpec.Name.IsExported() {
+					continue
+				}
+
+				if structType, ok := typeSpec.Type.(*ast.StructType); ok {
+
+					// Create ---@class doc for the struct
+					fmt.Printf("---@class %s\n", typeSpec.Name.Name)
+
+					for _, field := range structType.Fields.List {
+						// A field can have multiple declarations (e.g. X, Y int)
+						for _, name := range field.Names {
+							if name.IsExported() {
+								// Create ---@field doc for each field
+								fmt.Printf("---@field %s %s\n", name.Name, field.Type)
+							}
+						}
+					}
+					// Instantiate the local table so that we can attach methods to it
+					fmt.Printf("local %s = {}\n\n", typeSpec.Name.Name)
+
+				}
+
+			}
 		}
 	}
 }
