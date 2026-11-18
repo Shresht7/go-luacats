@@ -1,6 +1,7 @@
 package luacats
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -40,5 +41,35 @@ type Point struct{
 
 	if string(got) != want {
 		t.Fatalf("generated output:\n%swant:\n%s", got, want)
+	}
+}
+
+func TestGenerateToWriter(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "point.go")
+	goSource := `package example
+
+type Point struct {
+	X int
+	Y int
+}
+`
+
+	if err := os.WriteFile(source, []byte(goSource), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateToWriter(source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"---@class Point\n" +
+		"---@field X integer\n" +
+		"---@field Y integer\n" +
+		"local Point = {}\n\n"
+
+	if output.String() != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", output.String(), want)
 	}
 }

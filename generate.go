@@ -1,6 +1,7 @@
 package luacats
 
 import (
+	"bytes"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -85,6 +86,25 @@ func Generate(source string, target string) error {
 		if outFile != nil {
 			outFile.Close()
 		}
+	}
+
+	return nil
+}
+
+// Writes LuaCATS definitions for one Go source file
+func GenerateToWriter(source string, w io.Writer) error {
+	fset := token.NewFileSet()
+
+	file, err := parser.ParseFile(fset, source, nil, parser.ParseComments)
+	if err != nil {
+		return fmt.Errorf("parse %s: %w", source, err)
+	}
+
+	var output bytes.Buffer
+	processDecls(file.Decls, &output)
+
+	if _, err := io.Copy(w, &output); err != nil {
+		return fmt.Errorf("write LuaCATS output: %w", err)
 	}
 
 	return nil
