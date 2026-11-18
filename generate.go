@@ -31,9 +31,6 @@ func Generate(source string, target string) error {
 		}
 	}
 
-	// Crete a new FileSet for position information. Positions are relative to the fset
-	fset := token.NewFileSet()
-
 	// Collect the Go source files we need to operate on
 	var files []string
 	if info.IsDir() {
@@ -61,31 +58,36 @@ func Generate(source string, target string) error {
 
 	// Process files
 	for _, file := range files {
-		astFile, err := parser.ParseFile(fset, file, nil, parser.ParseComments)
+
+		// Generate LuaCATS output for this file
+		output, err := generateSource(file)
 		if err != nil {
-			return fmt.Errorf("Failed to parse %s: %w", file, err)
+			return err
 		}
 
-		var w io.Writer
-		var outFile *os.File
-
+		// Determine output path
 		baseName := strings.TrimSuffix(filepath.Base(file), ".go")
 		outPath := target
 		if info.IsDir() {
 			outPath = filepath.Join(target, baseName+".lua")
 		}
 
-		outFile, err = os.Create(outPath)
+		// Create output file
+		outFile, err := os.Create(outPath)
 		if err != nil {
-			return err
+			return fmt.Errorf("create %s: %w", outPath, err)
 		}
-		w = outFile
 
-		processDecls(astFile.Decls, w)
-
-		if outFile != nil {
-			outFile.Close()
+		// Write output to file, and report errors
+		_, writeError := io.Copy(outFile, output)
+		closeErr := outFile.Close()
+		if writeError != nil {
+			return fmt.Errorf("write %s: %w", outPath, writeError)
 		}
+		if closeErr != nil {
+			return fmt.Errorf("close %s: %w", outPath, closeErr)
+		}
+
 	}
 
 	return nil
