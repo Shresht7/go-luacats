@@ -7,6 +7,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io"
+	"os"
 )
 
 // Generate reads one Go source file and generates LuaCATS definitions.
@@ -56,20 +57,27 @@ func GenerateToWriter(source string, w io.Writer) error {
 
 // Generates LuaCATS output for a Go source file into a buffer
 func GenerateSource(source string) (*bytes.Buffer, error) {
-	// Crete a new FileSet for position information. Positions are relative to the fset
-	fset := token.NewFileSet()
 
-	// Parse the Go source file into an AST
-	file, err := parser.ParseFile(fset, source, nil, parser.ParseComments)
+	// Open the source file for reading
+	file, err := os.Open(source)
 	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", source, err)
+		return nil, fmt.Errorf("open %s: %w", source, err)
 	}
 
-	// Process the AST and generate LuaCATS output
+	// Generate LuaCATS output into buffer
 	var output bytes.Buffer
-	processDecls(file.Decls, &output)
+	generateErr := Generate(source, file, &output)
+	closeError := file.Close()
 
-	// Return the generated output buffer
+	// Check for errors
+	if generateErr != nil {
+		return nil, generateErr
+	}
+	if closeError != nil {
+		return nil, fmt.Errorf("close %s: %w", source, closeError)
+	}
+
+	// Return the buffer if no errors occurred
 	return &output, nil
 }
 
