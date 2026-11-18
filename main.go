@@ -112,6 +112,14 @@ func generateStructDocs(d *ast.GenDecl) {
 
 				if structType, ok := typeSpec.Type.(*ast.StructType); ok {
 
+					// Struct docstrings
+					if d.Doc != nil {
+						doc := strings.TrimSpace(d.Doc.Text())
+						for _, line := range strings.Split(doc, "\n") {
+							fmt.Printf("--- %s\n", line)
+						}
+					}
+
 					// Create ---@class doc for the struct
 					fmt.Printf("---@class %s\n", typeSpec.Name.Name)
 
