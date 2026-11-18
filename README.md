@@ -4,6 +4,50 @@ Generate [LuaCATS][LuaCATS] (Lua Comments and Type System) docstrings from [Go][
 
 Uses Go's built-in `go/parser` and `go/ast` packages to read [Go][Go] source code and extract type definitions and output formatted [LuaCATS][LuaCATS] definitions.
 
+For a Go source file:
+
+```go
+package main
+
+// Adds two numbers
+func MyFunc(a, b int) int {
+    return a + b
+}
+
+// Represents a simple structure
+type MyStruct struct {
+    X int
+    Y string
+    Z bool
+}
+
+// Does something with the struct
+func (m MyStruct) SomeLogic() int {
+    // Struct Method Implementation
+}
+```
+
+generates LuaCATS docstrings:
+
+```lua
+--- Adds two numbers
+---@param a integer
+---@param b integer
+---@return integer c
+function MyFunc(a, b) end
+
+--- Represents a simple structure
+---@class MyStruct
+---@field X integer
+---@field Y string
+---@field Z boolean
+local MyStruct = {}
+
+--- Does something with the struct
+---@return integer
+function MyStruct:SomeLogic() end
+```
+
 ---
 
 ## Installation
