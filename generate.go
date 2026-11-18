@@ -9,8 +9,9 @@ import (
 	"io"
 )
 
-// Reads one Go source file and generates LuaCATS definitions.
-// filename is only used to identify the source in parser errors.
+// Generate reads one Go source file and generates LuaCATS definitions.
+// filename is only used to identify the source in parser errors; Generate does not close src or dst
+// Writes no output if parsing fails
 func Generate(filename string, src io.Reader, dst io.Writer) error {
 
 	// Check for nil source reader
