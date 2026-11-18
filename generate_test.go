@@ -2,6 +2,7 @@ package luacats
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -71,5 +72,53 @@ type Point struct {
 
 	if output.String() != want {
 		t.Fatalf("generated output:\n%s\nwant:\n%s", output.String(), want)
+	}
+}
+
+type failingWriter struct {
+	err error
+}
+
+func (w failingWriter) Write(_ []byte) (int, error) {
+	return 0, w.err
+}
+
+func TestGenerateToWriterReturnsWriteError(t *testing.T) {
+	source := filepath.Join(t.TempDir(), "point.go")
+	if err := os.WriteFile(source, []byte("package example\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	writeErr := errors.New("write failed")
+	err := GenerateToWriter(source, failingWriter{err: writeErr})
+	if !errors.Is(err, writeErr) {
+		t.Fatalf("got error %v, want %v", err, writeErr)
+	}
+}
+
+func TestGeneratePreservesOutputOnParseError(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "bad.go")
+	target := filepath.Join(dir, "bad.lua")
+
+	if err := os.WriteFile(source, []byte("package example\ntype Broken struct {\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(target, []byte("existing output"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Generate(source, target); err == nil {
+		t.Fatal("expected a parse error")
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != "existing output" {
+		t.Fatalf("output was changed: %q", got)
 	}
 }
