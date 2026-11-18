@@ -50,7 +50,12 @@ func processFile(path string, fset *token.FileSet) {
 
 // Processes a directory of Go files
 func processDir(path string, fset *token.FileSet) {
-	// TODO: Implement directory processing
+	files, _ := os.ReadDir(path)
+	for _, f := range files {
+		if !f.IsDir() {
+			processFile(path+"/"+f.Name(), fset)
+		}
+	}
 }
 
 // Handles the extraction and generation process
