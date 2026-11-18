@@ -3,11 +3,12 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"io"
 	"strings"
 )
 
 // Generate LuaCATS docs for methods and functions
-func generateFuncDocs(d *ast.FuncDecl) {
+func generateFuncDocs(d *ast.FuncDecl, w io.Writer) {
 	if d.Name.IsExported() {
 
 		// Determine the Receiver struct (e.g. func (b *Buffer) ... -> Buffer)
@@ -27,7 +28,7 @@ func generateFuncDocs(d *ast.FuncDecl) {
 		if d.Doc != nil {
 			doc := strings.TrimSpace(d.Doc.Text())
 			for _, line := range strings.Split(doc, "\n") {
-				fmt.Printf("--- %s\n", line)
+				fmt.Fprintf(w, "--- %s\n", line)
 			}
 		}
 
@@ -39,7 +40,7 @@ func generateFuncDocs(d *ast.FuncDecl) {
 				if len(names) > 0 {
 					for _, name := range names {
 						paramNames = append(paramNames, name.Name)
-						fmt.Printf("---@param %s %s\n", name.Name, goTypeToLua(param.Type))
+						fmt.Fprintf(w, "---@param %s %s\n", name.Name, goTypeToLua(param.Type))
 					}
 				}
 			}
@@ -50,10 +51,10 @@ func generateFuncDocs(d *ast.FuncDecl) {
 			for _, res := range d.Type.Results.List {
 				if len(res.Names) > 0 {
 					for _, name := range res.Names {
-						fmt.Printf("---@return %s %s\n", goTypeToLua(res.Type), name.Name)
+						fmt.Fprintf(w, "---@return %s %s\n", goTypeToLua(res.Type), name.Name)
 					}
 				} else {
-					fmt.Printf("---@return %s\n", goTypeToLua(res.Type))
+					fmt.Fprintf(w, "---@return %s\n", goTypeToLua(res.Type))
 				}
 			}
 		}
@@ -64,6 +65,6 @@ func generateFuncDocs(d *ast.FuncDecl) {
 		if recvType != "" {
 			recvPart = recvType + ":"
 		}
-		fmt.Printf("function %s%s(%s) end\n\n", recvPart, d.Name.Name, paramsJoined)
+		fmt.Fprintf(w, "function %s%s(%s) end\n\n", recvPart, d.Name.Name, paramsJoined)
 	}
 }

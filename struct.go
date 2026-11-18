@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
+	"io"
 	"strings"
 )
 
 // Generate LuaCATS docs for Go structs
-func generateStructDocs(d *ast.GenDecl) {
+func generateStructDocs(d *ast.GenDecl, w io.Writer) {
 	if d.Tok == token.TYPE {
 		for _, spec := range d.Specs {
 			if typeSpec, ok := spec.(*ast.TypeSpec); ok {
@@ -24,24 +25,24 @@ func generateStructDocs(d *ast.GenDecl) {
 					if d.Doc != nil {
 						doc := strings.TrimSpace(d.Doc.Text())
 						for _, line := range strings.Split(doc, "\n") {
-							fmt.Printf("--- %s\n", line)
+							fmt.Fprintf(w, "--- %s\n", line)
 						}
 					}
 
 					// Create ---@class doc for the struct
-					fmt.Printf("---@class %s\n", typeSpec.Name.Name)
+					fmt.Fprintf(w, "---@class %s\n", typeSpec.Name.Name)
 
 					for _, field := range structType.Fields.List {
 						// A field can have multiple declarations (e.g. X, Y int)
 						for _, name := range field.Names {
 							if name.IsExported() {
 								// Create ---@field doc for each field
-								fmt.Printf("---@field %s %s\n", name.Name, goTypeToLua(field.Type))
+								fmt.Fprintf(w, "---@field %s %s\n", name.Name, goTypeToLua(field.Type))
 							}
 						}
 					}
 					// Instantiate the local table so that we can attach methods to it
-					fmt.Printf("local %s = {}\n\n", typeSpec.Name.Name)
+					fmt.Fprintf(w, "local %s = {}\n\n", typeSpec.Name.Name)
 
 				}
 

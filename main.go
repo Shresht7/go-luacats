@@ -5,8 +5,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -18,58 +21,113 @@ func main() {
 
 	// Extract filepath out of command-line arguments
 	source := os.Args[1]
+	target := ""
+	if len(os.Args) > 2 {
+		target = os.Args[2]
+	}
 
-	// Ensure filepath exists
-	fileinfo, err := os.Stat(source)
+	// Generate LuaCATS files
+	err := Generate(source, target)
 	if err != nil {
-		panic(err) // TODO: Improve error handling here
+		log.Fatal(err)
+	}
+
+	fmt.Println("Generated LuaCATS")
+}
+
+// Generates LuaCATS definitions for the given Go source file or directory
+func Generate(source string, target string) error {
+
+	// Get source fs info. Also ensures if it exists
+	info, err := os.Stat(source)
+	if err != nil {
+		return fmt.Errorf("Failed to stat source: %w", err)
+	}
+
+	// Resolve target if not explicitly set
+	if target == "" {
+		if info.IsDir() {
+			target = source
+		} else {
+			baseName := strings.TrimSuffix(source, ".go")
+			target = baseName + ".lua"
+		}
 	}
 
 	// Crete a new FileSet for position information. Positions are relative to the fset
 	fset := token.NewFileSet()
 
-	// Declare the file as meta
-	fmt.Printf("---@meta\n\n")
+	// Collect the Go source files we need to operate on
+	var files []string
+	if info.IsDir() {
+		entries, err := os.ReadDir(source)
+		if err != nil {
+			return fmt.Errorf("Failed to read directory: %w", err)
+		}
+		for _, f := range entries {
+			if !f.IsDir() && strings.HasSuffix(f.Name(), ".go") {
+				files = append(files, filepath.Join(source, f.Name()))
+			}
+		}
 
-	if fileinfo.IsDir() {
-		processDir(source, fset)
+		// Ensure that the target directory exists
+		if err := os.MkdirAll(target, 0755); err != nil {
+			return fmt.Errorf("Failed to create target directory: %w", err)
+		}
 	} else {
-		// Parse the Go file (including comments)
-		processFile(source, fset)
+		// Check target extension in this case
+		if !strings.HasSuffix(target, ".lua") {
+			return fmt.Errorf("Target must be a .lua file")
+		}
+		files = append(files, source)
 	}
-}
 
-// Processes a single Go file
-func processFile(path string, fset *token.FileSet) {
-	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-	if err != nil {
-		log.Fatalf("Failed to parse file: %v", err)
-	}
-	processDecls(node.Decls)
-}
+	// Process files
+	for _, file := range files {
+		astFile, err := parser.ParseFile(fset, file, nil, parser.ParseComments)
+		if err != nil {
+			return fmt.Errorf("Failed to parse %s: %w", file, err)
+		}
 
-// Processes a directory of Go files
-func processDir(path string, fset *token.FileSet) {
-	files, _ := os.ReadDir(path)
-	for _, f := range files {
-		if !f.IsDir() {
-			processFile(path+"/"+f.Name(), fset)
+		var w io.Writer
+		var outFile *os.File
+
+		baseName := strings.TrimSuffix(filepath.Base(file), ".go")
+		outPath := target
+		if info.IsDir() {
+			outPath = filepath.Join(target, baseName+".lua")
+		}
+
+		outFile, err = os.Create(outPath)
+		if err != nil {
+			return err
+		}
+		w = outFile
+
+		processDecls(astFile.Decls, w)
+
+		if outFile != nil {
+			outFile.Close()
 		}
 	}
+
+	return nil
 }
 
 // Handles the extraction and generation process
-func processDecls(decls []ast.Decl) {
+func processDecls(decls []ast.Decl, w io.Writer) {
+	fmt.Fprintf(w, "---@meta\n\n")
+
 	// Iterate through all top-level declarations in the file
 	for _, decl := range decls {
 		switch d := decl.(type) {
 
 		// Generic Declarations: Types, Structs, Consts, Vars
 		case *ast.GenDecl:
-			generateStructDocs(d)
+			generateStructDocs(d, w)
 		// Function Declarations: (standalone functions and methods)
 		case *ast.FuncDecl:
-			generateFuncDocs(d)
+			generateFuncDocs(d, w)
 		}
 	}
 }
