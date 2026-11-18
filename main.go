@@ -13,14 +13,14 @@ func main() {
 
 	// Show help message if needed
 	if len(os.Args) < 2 {
-		log.Fatal("Usage: go-luacats <path-to-go-file>")
+		log.Fatal("Usage: go-luacats <path-to-go-file-or-directory>")
 	}
 
 	// Extract filepath out of command-line arguments
-	sourceFile := os.Args[1]
+	source := os.Args[1]
 
 	// Ensure filepath exists
-	_, err := os.Stat(sourceFile)
+	fileinfo, err := os.Stat(source)
 	if err != nil {
 		panic(err) // TODO: Improve error handling here
 	}
@@ -31,14 +31,32 @@ func main() {
 	// Declare the file as meta
 	fmt.Printf("---@meta\n\n")
 
-	// Parse the Go file (including comments)
-	node, err := parser.ParseFile(fset, sourceFile, nil, parser.ParseComments)
+	if fileinfo.IsDir() {
+		processDir(source, fset)
+	} else {
+		// Parse the Go file (including comments)
+		processFile(source, fset)
+	}
+}
+
+// Processes a single Go file
+func processFile(path string, fset *token.FileSet) {
+	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
 		log.Fatalf("Failed to parse file: %v", err)
 	}
+	processDecls(node.Decls)
+}
 
+// Processes a directory of Go files
+func processDir(path string, fset *token.FileSet) {
+	// TODO: Implement directory processing
+}
+
+// Handles the extraction and generation process
+func processDecls(decls []ast.Decl) {
 	// Iterate through all top-level declarations in the file
-	for _, decl := range node.Decls {
+	for _, decl := range decls {
 		switch d := decl.(type) {
 
 		// Generic Declarations: Types, Structs, Consts, Vars
