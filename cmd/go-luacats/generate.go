@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,33 +56,16 @@ func Generate(source string, target string) error {
 	// Process files
 	for _, file := range files {
 
-		// Generate LuaCATS output for this file
-		output, err := luacats.GenerateSource(file)
-		if err != nil {
-			return err
-		}
-
-		// Determine output path
+		// Determine target output path
 		baseName := strings.TrimSuffix(filepath.Base(file), ".go")
 		outPath := target
 		if info.IsDir() {
 			outPath = filepath.Join(target, baseName+".lua")
 		}
 
-		// Create output file
-		outFile, err := os.Create(outPath)
-		if err != nil {
-			return fmt.Errorf("create %s: %w", outPath, err)
-		}
-
-		// Write output to file, and report errors
-		_, writeError := io.Copy(outFile, output)
-		closeErr := outFile.Close()
-		if writeError != nil {
-			return fmt.Errorf("write %s: %w", outPath, writeError)
-		}
-		if closeErr != nil {
-			return fmt.Errorf("close %s: %w", outPath, closeErr)
+		// Generate LuaCATS output to the target file
+		if err := luacats.GenerateFileToFile(file, outPath); err != nil {
+			return err
 		}
 
 	}

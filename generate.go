@@ -133,32 +133,6 @@ func GenerateFileToFile(source, target string) (err error) {
 	return nil
 }
 
-// Generates LuaCATS output for a Go source file into a buffer
-func GenerateSource(source string) (*bytes.Buffer, error) {
-
-	// Open the source file for reading
-	file, err := os.Open(source)
-	if err != nil {
-		return nil, fmt.Errorf("open %s: %w", source, err)
-	}
-
-	// Generate LuaCATS output into buffer
-	var output bytes.Buffer
-	generateErr := Generate(source, file, &output)
-	closeError := file.Close()
-
-	// Check for errors
-	if generateErr != nil {
-		return nil, generateErr
-	}
-	if closeError != nil {
-		return nil, fmt.Errorf("close %s: %w", source, closeError)
-	}
-
-	// Return the buffer if no errors occurred
-	return &output, nil
-}
-
 // Handles the extraction and generation process
 func processDecls(decls []ast.Decl, w io.Writer) {
 	fmt.Fprintf(w, "---@meta\n\n")
