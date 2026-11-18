@@ -164,6 +164,32 @@ func TestGenerateFileToFileRejectsSourceAsTarget(t *testing.T) {
 	}
 }
 
+func TestGenerateFileToFileRejectsHardLink(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "example.go")
+	target := filepath.Join(dir, "linked.lua")
+	original := "package example\n"
+
+	if err := os.WriteFile(source, []byte(original), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Link(source, target); err != nil {
+		t.Skipf("hard links unavailable: %v", err)
+	}
+
+	if err := GenerateFileToFile(source, target); err == nil {
+		t.Fatal("expected an error for a target linked to the source")
+	}
+
+	got, err := os.ReadFile(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != original {
+		t.Fatalf("source changed: %q", got)
+	}
+}
+
 func TestGenerateToWriter(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "point.go")
 	goSource := `package example
