@@ -91,7 +91,7 @@ func TestGenerateFileReturnsOpenError(t *testing.T) {
 	}
 }
 
-func TestGenerateFileToFile(t *testing.T) {
+func TestGenerateFileFromFile(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "example.go")
 	target := filepath.Join(dir, "example.lua")
@@ -102,7 +102,7 @@ func TestGenerateFileToFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := GenerateFileToFile(source, target); err != nil {
+	if err := GenerateFileFromFile(source, target); err != nil {
 		t.Fatal(err)
 	}
 
@@ -117,7 +117,7 @@ func TestGenerateFileToFile(t *testing.T) {
 
 }
 
-func TestGenerateFileToFilePreservesTargetOnParseError(t *testing.T) {
+func TestGenerateFileFromFilePreservesTargetOnParseError(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "bad.go")
 	target := filepath.Join(dir, "bad.lua")
@@ -128,7 +128,7 @@ func TestGenerateFileToFilePreservesTargetOnParseError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := GenerateFileToFile(source, target); err == nil {
+	if err := GenerateFileFromFile(source, target); err == nil {
 		t.Fatal("expected a parse error")
 	}
 
@@ -142,7 +142,7 @@ func TestGenerateFileToFilePreservesTargetOnParseError(t *testing.T) {
 	}
 }
 
-func TestGenerateFileToFileRejectsSourceAsTarget(t *testing.T) {
+func TestGenerateFileFromFileRejectsSourceAsTarget(t *testing.T) {
 	source := filepath.Join(t.TempDir(), "example.go")
 	original := "package example\n"
 
@@ -150,7 +150,7 @@ func TestGenerateFileToFileRejectsSourceAsTarget(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := GenerateFileToFile(source, source); err == nil {
+	if err := GenerateFileFromFile(source, source); err == nil {
 		t.Fatal("expected an error for identical source and target")
 	}
 
@@ -164,7 +164,7 @@ func TestGenerateFileToFileRejectsSourceAsTarget(t *testing.T) {
 	}
 }
 
-func TestGenerateFileToFileRejectsHardLink(t *testing.T) {
+func TestGenerateFileFromFileRejectsHardLink(t *testing.T) {
 	dir := t.TempDir()
 	source := filepath.Join(dir, "example.go")
 	target := filepath.Join(dir, "linked.lua")
@@ -177,7 +177,7 @@ func TestGenerateFileToFileRejectsHardLink(t *testing.T) {
 		t.Skipf("hard links unavailable: %v", err)
 	}
 
-	if err := GenerateFileToFile(source, target); err == nil {
+	if err := GenerateFileFromFile(source, target); err == nil {
 		t.Fatal("expected an error for a target linked to the source")
 	}
 

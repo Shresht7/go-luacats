@@ -66,9 +66,9 @@ func GenerateFromFile(source string, dst io.Writer) error {
 	return nil
 }
 
-// GenerateFileToFile reads a Go source file and writes its LuaCATS
+// GenerateFileFromFile reads a Go source file and writes its LuaCATS
 // definitions to a target file. An existing target will be overwritten.
-func GenerateFileToFile(source, target string) (err error) {
+func GenerateFileFromFile(source, target string) (err error) {
 
 	// Open the source file for reading
 	input, err := os.Open(source)

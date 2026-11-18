@@ -64,7 +64,7 @@ func Generate(source string, target string) error {
 		}
 
 		// Generate LuaCATS output to the target file
-		if err := luacats.GenerateFileToFile(file, outPath); err != nil {
+		if err := luacats.GenerateFileFromFile(file, outPath); err != nil {
 			return err
 		}
 
