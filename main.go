@@ -79,6 +79,14 @@ func goTypeToLua(t ast.Expr) string {
 			return t.Name // Custom structs (e.g. "Point", "Line", "Rect")
 		}
 
+	// Arrays and slices
+	case *ast.ArrayType:
+		return goTypeToLua(t.Elt) + "[]" // e.g. A []Point becomes Point[] in LuaCATS
+
+	// Maps
+	case *ast.MapType:
+		return fmt.Sprintf("table<%s,%s>", goTypeToLua(t.Key), goTypeToLua(t.Value))
+
 	// Fallback to "any" type
 	default:
 		return "any"
