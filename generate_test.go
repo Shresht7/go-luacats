@@ -189,3 +189,32 @@ func TestGenerateFileFromFileRejectsHardLink(t *testing.T) {
 		t.Fatalf("source changed: %q", got)
 	}
 }
+
+func TestGenerateStructAnnotations(t *testing.T) {
+	source := strings.NewReader(`package example
+
+// Point represents a position.
+type Point struct {
+	X, Y int
+	hidden string
+}
+
+type Alias string
+`)
+
+	var output bytes.Buffer
+	if err := Generate("point.go", source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Point represents a position.\n" +
+		"---@class Point\n" +
+		"---@field X integer\n" +
+		"---@field Y integer\n" +
+		"local Point = {}\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
