@@ -255,3 +255,26 @@ func hidden() {}
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateUnnamedParameters(t *testing.T) {
+	source := strings.NewReader(`package example
+
+// Accepts values without Go parameter names.
+func Consume(int, string) {}
+`)
+
+	var output bytes.Buffer
+	if err := Generate("example.go", source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Accepts values without Go parameter names.\n" +
+		"---@param arg1 integer\n" +
+		"---@param arg2 string\n" +
+		"function Consume(arg1, arg2) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
