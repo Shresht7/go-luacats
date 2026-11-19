@@ -19,19 +19,19 @@ func main() {
 // run executes the generation with given args and writes to stdout
 func run(args []string, stdout io.Writer) error {
 
+	// Require at least one argument
+	if len(args) == 0 {
+		return fmt.Errorf("Usage: go-luacats <source> [target]")
+	}
+
 	// Show help if requested
-	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
+	if args[0] == "-h" || args[0] == "--help" {
 		return showHelp(stdout)
 	}
 
 	// Show version if requested
-	if len(args) > 0 && (args[0] == "-v" || args[0] == "--version") {
+	if args[0] == "-v" || args[0] == "--version" {
 		return showVersion(stdout)
-	}
-
-	// Require at least one argument
-	if len(args) == 0 {
-		return fmt.Errorf("Usage: go-luacats <source> [target]")
 	}
 
 	// Extract the source file or directory from the args
