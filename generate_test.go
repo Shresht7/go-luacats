@@ -218,3 +218,40 @@ type Alias string
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateFunctionAnnotations(t *testing.T) {
+	source := strings.NewReader(`package example
+
+// Adds two values.
+func Add(a, b int) int {
+	return a + b
+}
+
+// Moves the point.
+func (p *Point) Move(dx int) (ok bool) {
+	return true
+}
+
+func hidden() {}
+`)
+
+	var output bytes.Buffer
+	if err := Generate("point.go", source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Adds two values.\n" +
+		"---@param a integer\n" +
+		"---@param b integer\n" +
+		"---@return integer\n" +
+		"function Add(a, b) end\n\n" +
+		"--- Moves the point.\n" +
+		"---@param dx integer\n" +
+		"---@return boolean ok\n" +
+		"function Point:Move(dx) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
