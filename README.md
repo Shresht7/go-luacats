@@ -66,11 +66,26 @@ go install ./cmd/go-luacats
 go-luacats <source> [target]
 ```
 
-`source` can be a Go file or a directory. For a file, `target` is a `.lua` file; for a directory, it is an output directory.
+Use `-h` or `--help` for help:
+
+```sh
+go-luacats --help
+```
+
+`source` can be a Go file or a directory. 
+
+If no `target` is provided, generated LuaCATS definitions are written to `stdout`. For a directory, the output is combined into one document.
+
+If `target` is provided:
+- For a Go file, `target` is the output `.lua` file
+- For a directory, `target` is the output directory; one `.lua` file per Go source file.
+
+Directory processing is non-recursive. Existing output files are overwritten.
 
 ```sh
 go-luacats path/to/file.go
 go-luacats path/to/file.go output.lua
+go-luacats path/to/directory/
 go-luacats path/to/directory/ generated/
 ```
 
