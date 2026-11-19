@@ -172,3 +172,45 @@ func TestRunHelpAndVersion(t *testing.T) {
 		})
 	}
 }
+
+func TestRunWithDirectoryTarget(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "source")
+	target := filepath.Join(dir, "generated")
+
+	if err := os.Mkdir(source, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	inputs := map[string]string{
+		"first.go":  "package example\ntype First struct{}\n",
+		"second.go": "package example\ntype Second struct{}\n",
+	}
+	for name, content := range inputs {
+		if err := os.WriteFile(filepath.Join(source, name), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var stdout bytes.Buffer
+	if err := run([]string{source, target}, &stdout); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stdout.String(), "Generated LuaCATS\n"; got != want {
+		t.Fatalf("stdout: got %q, want %q", got, want)
+	}
+
+	want := map[string]string{
+		"first.lua":  "---@meta\n\n---@class First\nlocal First = {}\n\n",
+		"second.lua": "---@meta\n\n---@class Second\nlocal Second = {}\n\n",
+	}
+	for name, expected := range want {
+		got, err := os.ReadFile(filepath.Join(target, name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != expected {
+			t.Errorf("%s: got %q, want %q", name, got, expected)
+		}
+	}
+}
