@@ -39,7 +39,7 @@ func run(args []string, stdout io.Writer) error {
 
 	// If only source is given, generate to stdout
 	if len(args) == 1 {
-		return GenerateStdout(source, stdout)
+		return generateStdout(source, stdout)
 	}
 
 	// Extract target if given
@@ -49,7 +49,7 @@ func run(args []string, stdout io.Writer) error {
 	}
 
 	// Generate LuaCATS files
-	if err := Generate(source, target); err != nil {
+	if err := generateFile(source, target); err != nil {
 		return err
 	}
 

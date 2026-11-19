@@ -12,7 +12,7 @@ import (
 )
 
 // Generates LuaCATS definitions for the given Go source file or directory
-func Generate(source string, target string) error {
+func generateFile(source string, target string) error {
 
 	// Get source fs info. Also ensures if it exists
 	info, err := os.Stat(source)
@@ -71,7 +71,7 @@ func Generate(source string, target string) error {
 }
 
 // Generates LuaCATS output to stdout for a source file or directory
-func GenerateStdout(source string, dst io.Writer) error {
+func generateStdout(source string, dst io.Writer) error {
 
 	// Get info about the source file or dir
 	info, err := os.Stat(source)

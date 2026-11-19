@@ -23,7 +23,7 @@ type Point struct{
 		t.Fatal(err)
 	}
 
-	if err := Generate(source, target); err != nil {
+	if err := generateFile(source, target); err != nil {
 		t.Fatal(err)
 	}
 
@@ -56,7 +56,7 @@ func TestGeneratePreservesOutputOnParseError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Generate(source, target); err == nil {
+	if err := generateFile(source, target); err == nil {
 		t.Fatal("expected a parse error")
 	}
 
@@ -91,7 +91,7 @@ func TestGenerateDirectory(t *testing.T) {
 		}
 	}
 
-	if err := Generate(source, target); err != nil {
+	if err := generateFile(source, target); err != nil {
 		t.Fatal(err)
 	}
 
