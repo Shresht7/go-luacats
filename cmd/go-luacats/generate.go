@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,4 +73,55 @@ func Generate(source string, target string) error {
 	}
 
 	return nil
+}
+
+// Generates LuaCATS output to stdout for a source file or directory
+func generateStdout(source string, dst io.Writer) error {
+
+	// Get info about the source file or dir
+	info, err := os.Stat(source)
+	if err != nil {
+		return fmt.Errorf("stat %s: %w", source, err)
+	}
+
+	// If this is a single file, delegate to GenerateFromFile
+	if !info.IsDir() {
+		return luacats.GenerateFromFile(source, dst)
+	}
+
+	// Read the directory of source files
+	entries, err := os.ReadDir(source)
+	if err != nil {
+		return fmt.Errorf("read directory %s: %w", source, err)
+	}
+
+	// Construct a single output
+	const header = "---@meta\n\n"
+	var output bytes.Buffer
+	output.WriteString(header)
+
+	// Process each Go file in the directory
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
+			continue
+		}
+
+		path := filepath.Join(source, entry.Name())
+		var fileOutput bytes.Buffer
+		if err := luacats.GenerateFromFile(path, &fileOutput); err != nil {
+			return err
+		}
+
+		// Remove the individual `---@meta` headers
+		body, ok := bytes.CutPrefix(fileOutput.Bytes(), []byte(header))
+		if !ok {
+			return fmt.Errorf("unexpected LuaCATS header for %s", path)
+		}
+
+		output.Write(body)
+	}
+
+	// Write combined output to dst
+	_, err = io.Copy(dst, &output)
+	return err
 }

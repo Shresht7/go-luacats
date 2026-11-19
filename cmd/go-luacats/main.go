@@ -22,8 +22,15 @@ func run(args []string, stdout io.Writer) error {
 		return fmt.Errorf("Usage: go-luacats <path-to-go-file-or-directory>")
 	}
 
-	// Extract source and target from args
+	// Extract the source file or directory from the args
 	source := args[0]
+
+	// If only source is given, generate to stdout
+	if len(args) == 1 {
+		return generateStdout(source, stdout)
+	}
+
+	// Extract target if given
 	target := ""
 	if len(args) > 1 {
 		target = args[1]
