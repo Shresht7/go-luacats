@@ -133,7 +133,7 @@ func generateSelectedTypes(sourceRoot, target string, values []string) error {
 
 		// Generate LuaCATS for this type
 		var output bytes.Buffer
-		if err := luacats.GenerateType(packageDir, selector.typeName, &output); err != nil {
+		if err := luacats.GenerateSymbol(packageDir, selector.typeName, &output); err != nil {
 			return fmt.Errorf("generate %s: %w", selectorPath(selector), err)
 		}
 

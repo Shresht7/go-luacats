@@ -132,9 +132,9 @@ func GenerateFileFromFile(source, target string) (err error) {
 	return nil
 }
 
-// GenerateType writes LuaCATS definitions for an exported struct and its
+// GenerateSymbol writes LuaCATS definitions for an exported struct and its
 // exported methods from a Go package directory. It does not close dst.
-func GenerateType(packageDir, typeName string, dst io.Writer) error {
+func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 
 	// Check package directory exists and is a directory
 	info, err := os.Stat(packageDir)

@@ -379,7 +379,7 @@ func helper() {}
 	}
 
 	var output bytes.Buffer
-	if err := GenerateType(packageDir, "Point", &output); err != nil {
+	if err := GenerateSymbol(packageDir, "Point", &output); err != nil {
 		t.Fatal(err)
 	}
 
@@ -408,7 +408,7 @@ type Point struct{}
 	}
 
 	writeErr := errors.New("write failed")
-	err := GenerateType(packageDir, "Point", failingWriter{err: writeErr})
+	err := GenerateSymbol(packageDir, "Point", failingWriter{err: writeErr})
 	if !errors.Is(err, writeErr) {
 		t.Fatalf("got error %v, want %v", err, writeErr)
 	}
