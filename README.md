@@ -101,7 +101,7 @@ go-luacats path/to/directory/
 go-luacats path/to/directory/ generated/
 ```
 
-Directory processing is non-recursive and generates one Lua file per Go file.
+When a target directory is provided, processing is non-recursive and generates one Lua file per top-level Go file.
 
 > [!CAUTION]
 > Existing output files are overwritten!
