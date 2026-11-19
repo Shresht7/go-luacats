@@ -1,11 +1,12 @@
 # `go-luacats`
 
-Generate [LuaCATS][LuaCATS] (Lua Comments and Type System) docstrings from [Go][Go] code.
+Generate [LuaCATS][LuaCATS] (_Lua Comments and Type System_) docstrings from [Go][Go] code.
 
 Uses Go's built-in `go/parser` and `go/ast` packages to read [Go][Go] source code and extract type definitions and output formatted [LuaCATS][LuaCATS] definitions.
 
 > [!IMPORTANT]
-> Currently, the generator emits annotations for exported functions and methods, exported struct types, and exported struct fields. Other declarations are effectively ignored at this moment.
+> Currently, the generator emits annotations for exported `functions` and `methods`, exported `struct` types, and exported `struct fields`. 
+> Other declarations are effectively ignored at this moment.
 
 For a Go source file:
 
@@ -101,10 +102,10 @@ go-luacats path/to/directory/
 go-luacats path/to/directory/ generated/
 ```
 
-When a target directory is provided, processing is non-recursive and generates one Lua file per top-level Go file.
+When a target directory is provided, processing is **non-recursive** and generates one Lua file per top-level Go file.
 
 > [!CAUTION]
-> Existing output files are overwritten!
+> Existing output files are **overwritten**!
 
 ### Library
 
