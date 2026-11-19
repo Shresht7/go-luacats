@@ -22,6 +22,11 @@ func run(args []string, stdout io.Writer) error {
 		return help(stdout)
 	}
 
+	// Require at least one argument
+	if len(args) == 0 {
+		return fmt.Errorf("Usage: go-luacats <source> [target]")
+	}
+
 	// Extract the source file or directory from the args
 	source := args[0]
 
