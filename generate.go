@@ -35,16 +35,8 @@ func Generate(filename string, src io.Reader, dst io.Writer) error {
 	// Attach comments to fields if missing
 	attachFieldComments(fset, file)
 
-	// Process the AST and generate LuaCATS output
-	var output bytes.Buffer
-	processDecls(file.Decls, &output)
-
-	// Write output buffer to the destination
-	if _, err = io.Copy(dst, &output); err != nil {
-		return err
-	}
-
-	return nil
+	// Process the AST and write LuaCATS output directly to the destination
+	return processDecls(file.Decls, dst)
 }
 
 // GenerateFromFile opens source, generates its LuaCATS definitions, and writes them to dst.
@@ -264,16 +256,10 @@ func GenerateType(packageDir, typeName string, dst io.Writer) error {
 		decls = append(decls, method)
 	}
 
-	// Generate LuaCATS output
-	var output bytes.Buffer
-	processDecls(decls, &output)
-
-	// Write output to destination
-	if _, err := io.Copy(dst, &output); err != nil {
+	// Generate LuaCATS output directly to the destination
+	if err := processDecls(decls, dst); err != nil {
 		return fmt.Errorf("write LuaCATS output: %w", err)
 	}
-
-	// Done successfully
 	return nil
 }
 
