@@ -19,7 +19,7 @@ func TestRunWithTarget(t *testing.T) {
 	}
 
 	var stdout bytes.Buffer
-	if err := run([]string{source, target}, &stdout); err != nil {
+	if err := run([]string{source, target}, nil, &stdout); err != nil {
 		t.Fatal(err)
 	}
 
@@ -40,7 +40,7 @@ func TestRunWithTarget(t *testing.T) {
 
 func TestRunRequiresSource(t *testing.T) {
 	var stdout bytes.Buffer
-	if err := run(nil, &stdout); err == nil {
+	if err := run(nil, nil, &stdout); err == nil {
 		t.Fatal("expected an error for missing source")
 	}
 }
@@ -55,7 +55,7 @@ func TestRunWritesFileToStdoutByDefault(t *testing.T) {
 	}
 
 	var stdout bytes.Buffer
-	if err := run([]string{source}, &stdout); err != nil {
+	if err := run([]string{source}, nil, &stdout); err != nil {
 		t.Fatal(err)
 	}
 
@@ -85,7 +85,7 @@ func TestRunWritersDirectoryToStdoutByDefault(t *testing.T) {
 	}
 
 	var stdout bytes.Buffer
-	if err := run([]string{source}, &stdout); err != nil {
+	if err := run([]string{source}, nil, &stdout); err != nil {
 		t.Fatal(err)
 	}
 
@@ -118,7 +118,7 @@ func TestRunRejectsEmptyTarget(t *testing.T) {
 	}
 
 	var stdout bytes.Buffer
-	if err := run([]string{source, ""}, &stdout); err == nil {
+	if err := run([]string{source, ""}, nil, &stdout); err == nil {
 		t.Error("expected an error for an empty target")
 	}
 
@@ -163,7 +163,7 @@ func TestRunHelpAndVersion(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var stdout bytes.Buffer
-			if err := run(test.args, &stdout); err != nil {
+			if err := run(test.args, nil, &stdout); err != nil {
 				t.Fatal(err)
 			}
 			if !strings.Contains(stdout.String(), test.want) {
@@ -193,7 +193,7 @@ func TestRunWithDirectoryTarget(t *testing.T) {
 	}
 
 	var stdout bytes.Buffer
-	if err := run([]string{source, target}, &stdout); err != nil {
+	if err := run([]string{source, target}, nil, &stdout); err != nil {
 		t.Fatal(err)
 	}
 	if got, want := stdout.String(), "Generated LuaCATS\n"; got != want {
@@ -243,7 +243,7 @@ func TestRunWithSelectedTypes(t *testing.T) {
 		"--type", "internal/ui.Widget",
 	}
 	var stdout bytes.Buffer
-	if err := run(args, &stdout); err != nil {
+	if err := run(args, nil, &stdout); err != nil {
 		t.Fatal(err)
 	}
 
@@ -261,4 +261,37 @@ func TestRunWithSelectedTypes(t *testing.T) {
 		}
 	}
 
+}
+
+func TestRunReadsStdinToStdout(t *testing.T) {
+	source := strings.NewReader("package example\ntype Point struct { X int }\n")
+
+	var stdout bytes.Buffer
+	if err := run([]string{"-"}, source, &stdout); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n---@class Point\n---@field X integer\nlocal Point = {}\n\n"
+	if got := stdout.String(); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestRunReadsStdinToFile(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "out.lua")
+	source := strings.NewReader("package example\ntype Point struct { X int }\n")
+
+	var stdout bytes.Buffer
+	if err := run([]string{"-", target}, source, &stdout); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err_ := os.ReadFile(target)
+	if err_ != nil {
+		t.Fatal(err_)
+	}
+
+	if string(got) != "---@meta\n\n---@class Point\n---@field X integer\nlocal Point = {}\n\n" {
+		t.Error("unexpected output")
+	}
 }

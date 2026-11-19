@@ -12,13 +12,14 @@ var version = "0.2.0"
 
 // the main entrypoint of the cli
 func main() {
-	if err := run(os.Args[1:], os.Stdout); err != nil {
+	if err := run(os.Args[1:], os.Stdin, os.Stdout); err != nil {
 		log.Fatal(err)
 	}
 }
 
 // run executes the generation with given args and writes to stdout
-func run(args []string, stdout io.Writer) error {
+// can read from stdin and write to stdout
+func run(args []string, stdin io.Reader, stdout io.Writer) error {
 
 	// Require at least one argument
 	if len(args) == 0 {
@@ -53,6 +54,21 @@ func run(args []string, stdout io.Writer) error {
 	target := ""
 	if len(positionals) > 1 {
 		target = positionals[1]
+	}
+
+	// Handle stdin as source
+	if source == "-" {
+		if len(selectors) > 0 {
+			return fmt.Errorf("cannot use --type with stdin")
+		}
+		if target == "" {
+			return generateStdinToWriter(stdin, stdout)
+		}
+		if err := generateStdinToFile(stdin, target); err != nil {
+			return err
+		}
+		_, err := fmt.Fprintln(stdout, "Generated LuaCATS")
+		return err
 	}
 
 	// If selectors are given, generate selected types only
