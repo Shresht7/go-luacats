@@ -71,7 +71,7 @@ func Generate(source string, target string) error {
 }
 
 // Generates LuaCATS output to stdout for a source file or directory
-func generateStdout(source string, dst io.Writer) error {
+func GenerateStdout(source string, dst io.Writer) error {
 
 	// Get info about the source file or dir
 	info, err := os.Stat(source)

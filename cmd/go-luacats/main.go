@@ -27,7 +27,7 @@ func run(args []string, stdout io.Writer) error {
 
 	// If only source is given, generate to stdout
 	if len(args) == 1 {
-		return generateStdout(source, stdout)
+		return GenerateStdout(source, stdout)
 	}
 
 	// Extract target if given
