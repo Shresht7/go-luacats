@@ -156,3 +156,27 @@ func generateSelectedTypes(sourceRoot, target string, values []string) error {
 func selectorPath(selector typeSelector) string {
 	return filepath.Join(selector.packagePath, selector.typeName)
 }
+
+// Generates LuaCATS from stdin to a writer
+func generateStdinToWriter(src io.Reader, dst io.Writer) error {
+	return luacats.Generate("<stdin>", src, dst)
+}
+
+// Generates LuaCATS from stdin to a file
+func generateStdinToFile(src io.Reader, target string) error {
+	if !strings.HasSuffix(target, ".lua") {
+		return fmt.Errorf("target must be a .lua file")
+	}
+
+	// Generate before opening the target so parse errors don't overwrite it
+	var output bytes.Buffer
+	if err := luacats.Generate("<stdin>", src, &output); err != nil {
+		return err
+	}
+
+	if err := os.WriteFile(target, output.Bytes(), 0644); err != nil {
+		return fmt.Errorf("write %s: %w", target, err)
+	}
+
+	return nil
+}
