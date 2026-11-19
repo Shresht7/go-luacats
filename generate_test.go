@@ -396,3 +396,20 @@ func helper() {}
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateTypeReturnsWriteError(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+type Point struct{}
+`
+	if err := os.WriteFile(filepath.Join(packageDir, "point.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	writeErr := errors.New("write failed")
+	err := GenerateType(packageDir, "Point", failingWriter{err: writeErr})
+	if !errors.Is(err, writeErr) {
+		t.Fatalf("got error %v, want %v", err, writeErr)
+	}
+}

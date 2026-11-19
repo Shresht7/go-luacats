@@ -309,8 +309,10 @@ func receiverTypeName(decl *ast.FuncDecl) string {
 }
 
 // Handles the extraction and generation process
-func processDecls(decls []ast.Decl, w io.Writer) {
-	fmt.Fprintf(w, "---@meta\n\n")
+func processDecls(decls []ast.Decl, w io.Writer) error {
+	if _, err := fmt.Fprintf(w, "---@meta\n\n"); err != nil {
+		return err
+	}
 
 	// Iterate through all top-level declarations in the file
 	for _, decl := range decls {
@@ -318,10 +320,15 @@ func processDecls(decls []ast.Decl, w io.Writer) {
 
 		// Generic Declarations: Types, Structs, Consts, Vars
 		case *ast.GenDecl:
-			generateStructDocs(d, w)
+			if err := generateStructDocs(d, w); err != nil {
+				return err
+			}
 		// Function Declarations: (standalone functions and methods)
 		case *ast.FuncDecl:
-			generateFuncDocs(d, w)
+			if err := generateFuncDocs(d, w); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
