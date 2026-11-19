@@ -94,14 +94,16 @@ import (
 )
 
 func main() {
-    err := luacats.Generate("path/to/file.go", "output.lua")
+    err := luacats.GenerateFileFromFile("path/to/file.go", "output.lua")
     if err != nil {
         log.Fatal(err)
     }
 }
 ```
 
-Pass an empty target to use the default output location
+For more control:
+- Use `GenerateFromFile(src string, dst io.Writer)` to write to an `io.Writer`
+- Use `Generate(filename string, src io.Reader, dst io.Writer)` when you want to provide both an `io.Reader` and `io.Writer`
 
 ---
 
