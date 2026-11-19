@@ -10,9 +10,9 @@ import (
 	"os"
 )
 
-// Generate reads one Go source file and generates LuaCATS definitions.
-// filename is only used to identify the source in parser errors; Generate does not close src or dst
-// Writes no output if parsing fails
+// Generate parses one Go source file from `src` and writes its LuaCATS definitions to `dst`.
+// filename is used for parser diagnostics only. Generate does not close `src` or `dst`.
+// It writes nothing if parsing fails, a write error may leave partial output.
 func Generate(filename string, src io.Reader, dst io.Writer) error {
 
 	// Check for nil source reader
@@ -41,8 +41,8 @@ func Generate(filename string, src io.Reader, dst io.Writer) error {
 	return nil
 }
 
-// GenerateFromFile reads a Go source file and writes its LuaCATS definitions out to a writer
-// It closes the source file but does not close dst
+// GenerateFromFile opens source, generates its LuaCATS definitions, and writes them to dst.
+// It closes the source file but does *not* close dst.
 func GenerateFromFile(source string, dst io.Writer) error {
 
 	// Open the source file for reading
@@ -66,8 +66,9 @@ func GenerateFromFile(source string, dst io.Writer) error {
 	return nil
 }
 
-// GenerateFileFromFile reads a Go source file and writes its LuaCATS
-// definitions to a target file. An existing target will be overwritten.
+// GenerateFileFromFile reads source file and writes its LuaCATS definitions to the target file.
+// It overwrites an existing target after successfully parsing the source file and rejects
+// targets that refer to the same file as source. A write error may leave partial output.
 func GenerateFileFromFile(source, target string) (err error) {
 
 	// Open the source file for reading
