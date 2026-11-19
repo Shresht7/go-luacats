@@ -295,3 +295,25 @@ func TestRunReadsStdinToFile(t *testing.T) {
 		t.Error("unexpected output")
 	}
 }
+
+func TestRunStdinToFilePreservesTargetOnParseError(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "out.lua")
+	if err := os.WriteFile(target, []byte("existing output"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	source := strings.NewReader("package example\ntype Broken struct {\n")
+	var stdout bytes.Buffer
+	if err := run([]string{"-", target}, source, &stdout); err == nil {
+		t.Fatal("expected a parse error")
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != "existing output" {
+		t.Fatalf("target changed: %q", got)
+	}
+}
