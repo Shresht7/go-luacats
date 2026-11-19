@@ -2,29 +2,39 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 )
 
+// the main entrypoint of the cli
 func main() {
+	if err := run(os.Args[1:], os.Stdout); err != nil {
+		log.Fatal(err)
+	}
+}
 
-	// Show help message if needed
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: go-luacats <path-to-go-file-or-directory>")
+// run executes the generation with given args and writes to stdout
+func run(args []string, stdout io.Writer) error {
+
+	// Check for required args
+	if len(args) < 1 {
+		return fmt.Errorf("Usage: go-luacats <path-to-go-file-or-directory>")
 	}
 
-	// Extract filepath out of command-line arguments
-	source := os.Args[1]
+	// Extract source and target from args
+	source := args[0]
 	target := ""
-	if len(os.Args) > 2 {
-		target = os.Args[2]
+	if len(args) > 1 {
+		target = args[1]
 	}
 
 	// Generate LuaCATS files
-	err := Generate(source, target)
-	if err != nil {
-		log.Fatal(err)
+	if err := Generate(source, target); err != nil {
+		return err
 	}
 
-	fmt.Println("Generated LuaCATS")
+	// Write output message
+	_, err := fmt.Fprintln(stdout, "Generated LuaCATS")
+	return err
 }
