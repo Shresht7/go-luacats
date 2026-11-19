@@ -21,7 +21,7 @@ func run(args []string, stdout io.Writer) error {
 
 	// Require at least one argument
 	if len(args) == 0 {
-		return fmt.Errorf("Usage: go-luacats <source> [target]")
+		return fmt.Errorf("%s", getUsage())
 	}
 
 	// Show help if requested
@@ -58,9 +58,14 @@ func run(args []string, stdout io.Writer) error {
 	return err
 }
 
+// returns usage string
+func getUsage() string {
+	return "Usage: go-luacats <source> [target]"
+}
+
 // prints showHelp message to the writer
 func showHelp(w io.Writer) error {
-	_, err := fmt.Fprintf(w, `Usage: go-luacats <source> [target]
+	_, err := fmt.Fprintf(w, `%s
 
 Generate LuaCATS definitions from a Go source file or directory.
 
@@ -68,7 +73,7 @@ With no target, output is written to stdout.
 With a target, a source file generates one Lua file; a directory generates one Lua file per Go file.
 
 Caution: Existing output files are overwritten.
-`)
+`, getUsage())
 	return err
 }
 
