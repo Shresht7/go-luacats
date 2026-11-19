@@ -87,7 +87,9 @@ go-luacats --help
 go-luacats --version
 ```
 
-`source` can be a Go file or a directory. 
+`source` can be a Go file, a directory, or `-` to read Go source from stdin.
+
+Reading from stdin can be extremely useful when combined with the `go doc -src` command.
 
 If no `target` is provided, generated LuaCATS definitions are written to `stdout`. For a directory, the output is combined into one document.
 
@@ -105,6 +107,7 @@ go-luacats path/to/file.go output.lua
 go-luacats path/to/directory/
 go-luacats path/to/directory/ generated/
 go-luacats path/to/module generated/ --type internal/action.MyType --type internal/action.OtherType
+go doc -src os.ReadFile | go-luacats -
 ```
 
 When a target directory is provided, processing is **non-recursive** and generates one Lua file per top-level Go file.

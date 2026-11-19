@@ -140,6 +140,8 @@ func showHelp(w io.Writer) error {
 
 Generate LuaCATS definitions from a Go source file or directory.
 
+Use - as source to read Go source from stdin. Useful when combined with go doc -src
+
 With no target, output is written to stdout.
 With a target, a source file generates one Lua file; a directory generates one Lua file per Go file.
 
