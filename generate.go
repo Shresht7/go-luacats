@@ -132,8 +132,9 @@ func GenerateFileFromFile(source, target string) (err error) {
 	return nil
 }
 
-// GenerateSymbol writes LuaCATS definitions for an exported struct and its
-// exported methods from a Go package directory. It does not close dst.
+// GenerateSymbol writes LuaCATS definitions for an exported function or struct.
+// For a struct, it includes exported methods from the package's active Go files.
+// GenerateSymbol does not close dst.
 func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 
 	// Check package directory exists and is a directory
@@ -154,7 +155,7 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 	// Parse all Go files for the type and its methods
 	fset := token.NewFileSet()
 	var packageName string
-	var selectedDecl *ast.GenDecl
+	var selectedDecl ast.Decl
 	var methods []*ast.FuncDecl
 	for _, entry := range entries {
 		name := entry.Name()
@@ -237,17 +238,30 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 				}
 
 			case *ast.FuncDecl:
-				// Collect methods for the type
-				if receiverTypeName(d) == typeName {
+				// Select a top-level function by name
+				if d.Recv == nil && d.Name.Name == typeName {
+					if !d.Name.IsExported() {
+						return fmt.Errorf("func %s is not exported", typeName)
+					}
+					if selectedDecl != nil {
+						return fmt.Errorf("symbol %s is declared more than once in %s", typeName, packageDir)
+					}
+					selectedDecl = d
+					continue
+				}
+
+				// Collect methods when the selected symbol is their receiver type
+				if d.Recv != nil && receiverTypeName(d) == typeName {
 					methods = append(methods, d)
 				}
+
 			}
 		}
 	}
 
-	// If no struct found
+	// If no symbol found
 	if selectedDecl == nil {
-		return fmt.Errorf("exported struct %s not found in %s", typeName, packageDir)
+		return fmt.Errorf("exported symbol %s not found in %s", typeName, packageDir)
 	}
 
 	// Consolidate decls and methods into one list

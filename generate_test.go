@@ -413,3 +413,43 @@ type Point struct{}
 		t.Fatalf("got error %v, want %v", err, writeErr)
 	}
 }
+
+func TestGenerateSymbolFunction(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+// Double doubles a value.
+func Double(x int) int {
+	return x * 2
+}
+
+func Other() {}
+
+type Widget struct{}
+
+func (w *Widget) Double(x int) int {
+	return x * 2
+}
+`
+
+	path := filepath.Join(packageDir, "api.go")
+	if err := os.WriteFile(path, []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Double", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Double doubles a value.\n" +
+		"---@param x integer\n" +
+		"---@return integer\n" +
+		"function Double(x) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+
+}
