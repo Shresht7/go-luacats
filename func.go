@@ -11,18 +11,8 @@ import (
 func generateFuncDocs(d *ast.FuncDecl, w io.Writer) {
 	if d.Name.IsExported() {
 
-		// Determine the Receiver struct (e.g. func (b *Buffer) ... -> Buffer)
-		recvType := ""
-		if d.Recv != nil {
-			switch t := d.Recv.List[0].Type.(type) {
-			case *ast.StarExpr:
-				if ident, ok := t.X.(*ast.Ident); ok {
-					recvType = ident.Name
-				}
-			case *ast.Ident:
-				recvType = t.Name
-			}
-		}
+	// Determine the Receiver struct (e.g. func (b *Buffer) ... -> Buffer)
+	recvType := receiverTypeName(d)
 
 		// Docstrings
 		if d.Doc != nil {
