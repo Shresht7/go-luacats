@@ -29,6 +29,9 @@ func Generate(filename string, src io.Reader, dst io.Writer) error {
 		return fmt.Errorf("parse %s: %w", filename, err)
 	}
 
+	// Attach comments to fields if missing
+	attachFieldComments(fset, file)
+
 	// Process the AST and generate LuaCATS output
 	var output bytes.Buffer
 	processDecls(file.Decls, &output)

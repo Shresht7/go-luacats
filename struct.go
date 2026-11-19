@@ -37,7 +37,7 @@ func generateStructDocs(d *ast.GenDecl, w io.Writer) {
 						for _, name := range field.Names {
 							if name.IsExported() {
 								// Create ---@field doc for each field
-								fmt.Fprintf(w, "---@field %s %s\n", name.Name, goTypeToLua(field.Type))
+								writeTypeAnnotation(w, "---@field", name.Name, goTypeToLua(field.Type), fieldDescription(field))
 							}
 						}
 					}

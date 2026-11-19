@@ -278,3 +278,34 @@ func Consume(int, string) {}
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateFieldAndParameterDescriptions(t *testing.T) {
+	source := strings.NewReader(`package example
+
+type Point struct {
+	// Horizontal coordinate.
+	X int
+}
+
+func Translate(
+	// Horizontal distance.
+	dx int,
+) {}
+`)
+
+	var output bytes.Buffer
+	if err := Generate("point.go", source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"---@class Point\n" +
+		"---@field X integer Horizontal coordinate.\n" +
+		"local Point = {}\n\n" +
+		"---@param dx integer Horizontal distance.\n" +
+		"function Translate(dx) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}

@@ -37,18 +37,20 @@ func generateFuncDocs(d *ast.FuncDecl, w io.Writer) {
 		paramIndex := 0
 		if d.Type.Params != nil {
 			for _, param := range d.Type.Params.List {
+				desc := fieldDescription(param)
+				luaType := goTypeToLua(param.Type)
 				names := param.Names
 				if len(names) > 0 {
 					for _, name := range names {
 						paramIndex++
 						paramNames = append(paramNames, name.Name)
-						fmt.Fprintf(w, "---@param %s %s\n", name.Name, goTypeToLua(param.Type))
+						writeTypeAnnotation(w, "---@param", name.Name, luaType, desc)
 					}
 				} else {
 					paramIndex++
 					name := fmt.Sprintf("arg%d", paramIndex)
 					paramNames = append(paramNames, name)
-					fmt.Fprintf(w, "---@param %s %s\n", name, goTypeToLua(param.Type))
+					writeTypeAnnotation(w, "---@param", name, luaType, desc)
 				}
 			}
 		}
