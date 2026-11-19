@@ -4,6 +4,9 @@ Generate [LuaCATS][LuaCATS] (Lua Comments and Type System) docstrings from [Go][
 
 Uses Go's built-in `go/parser` and `go/ast` packages to read [Go][Go] source code and extract type definitions and output formatted [LuaCATS][LuaCATS] definitions.
 
+> [!IMPORTANT]
+> Currently, the generator emits annotations for exported functions and methods, exported struct types, and exported struct fields. Other declarations are effectively ignored at this moment.
+
 For a Go source file:
 
 ```go
@@ -79,7 +82,7 @@ If no `target` is provided, generated LuaCATS definitions are written to `stdout
 
 If `target` is provided:
 - For a Go file, `target` is the output `.lua` file
-- For a directory, `target` is the output directory; one `.lua` file per Go source file.
+- For a directory, `target` is the output directory; one `.lua` file per `.go` source file.
 
 ```sh
 go-luacats path/to/file.go
@@ -114,8 +117,8 @@ func main() {
 ```
 
 For more control:
-- Use `GenerateFromFile(src string, dst io.Writer)` to write to an `io.Writer`
-- Use `Generate(filename string, src io.Reader, dst io.Writer)` when you want to provide both an `io.Reader` and `io.Writer`
+- Use `GenerateFromFile(sourceFile string, dst io.Writer)` when the source is a file and the destination can be any writer.
+- Use `Generate(filename string, src io.Reader, dst io.Writer)` when you already have a source reader.
 
 ---
 
