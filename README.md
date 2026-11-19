@@ -55,11 +55,21 @@ function MyStruct:SomeLogic() end
 
 ## Installation
 
-From a checkout of this repository:
+Requires Go 1.27.4 or newer.
+
+Install the latest version:
 
 ```sh
-go install ./cmd/go-luacats
+go install github.com/Shresht7/go-luacats/cmd/go-luacats@latest
 ```
+
+To run the CLI directly without installing first:
+
+```sh
+go run github.com/Shresht7/go-luacats/cmd/go-luacats@latest --help
+```
+
+To pin to a specific version, replace `@latest` with the desired version (e.g., `@v1.0.0`)
 
 ## Usage
 
