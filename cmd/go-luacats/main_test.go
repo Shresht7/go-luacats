@@ -214,3 +214,51 @@ func TestRunWithDirectoryTarget(t *testing.T) {
 		}
 	}
 }
+
+func TestRunWithSelectedTypes(t *testing.T) {
+	root := t.TempDir()
+	pointDir := filepath.Join(root, "internal", "api")
+	widgetDir := filepath.Join(root, "internal", "ui")
+	target := filepath.Join(t.TempDir(), "generated")
+
+	for _, dir := range []string{pointDir, widgetDir} {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	pointSource := "package api\ntype Point struct { X int }\n"
+	if err := os.WriteFile(filepath.Join(pointDir, "point.go"), []byte(pointSource), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	widgetSource := "package ui\ntype Widget struct { Name string }\n"
+	if err := os.WriteFile(filepath.Join(widgetDir, "widget.go"), []byte(widgetSource), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{
+		"--type", "internal/api.Point",
+		root, target,
+		"--type", "internal/ui.Widget",
+	}
+	var stdout bytes.Buffer
+	if err := run(args, &stdout); err != nil {
+		t.Fatal(err)
+	}
+
+	wantFiles := map[string]string{
+		filepath.Join("internal", "api", "Point.lua"): "---@meta\n\n---@class Point\n---@field X integer\nlocal Point = {}\n\n",
+		filepath.Join("internal", "ui", "Widget.lua"): "---@meta\n\n---@class Widget\n---@field Name string\nlocal Widget = {}\n\n",
+	}
+	for relPath, want := range wantFiles {
+		got, err := os.ReadFile(filepath.Join(target, relPath))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != want {
+			t.Errorf("%s: got %q, want %q", relPath, got, want)
+		}
+	}
+
+}

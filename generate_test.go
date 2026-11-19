@@ -342,3 +342,74 @@ func Translate(
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateTypeIncludesMethodsFromOtherFiles(t *testing.T) {
+	packageDir := t.TempDir()
+
+	files := map[string]string{
+		"point.go": `package api
+
+// Point represents a position.
+type Point struct {
+	X int
+}
+`,
+		"point_methods.go": `package api
+
+// Move shifts the point.
+func (p *Point) Move(dx int) {}
+`,
+		"widget.go": `package api
+
+type Widget struct {
+	Name string
+}
+
+func (w *Widget) Rename(name string) {}
+
+func helper() {}
+`,
+	}
+
+	for name, content := range files {
+		path := filepath.Join(packageDir, name)
+		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var output bytes.Buffer
+	if err := GenerateType(packageDir, "Point", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Point represents a position.\n" +
+		"---@class Point\n" +
+		"---@field X integer\n" +
+		"local Point = {}\n\n" +
+		"--- Move shifts the point.\n" +
+		"---@param dx integer\n" +
+		"function Point:Move(dx) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestGenerateTypeReturnsWriteError(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+type Point struct{}
+`
+	if err := os.WriteFile(filepath.Join(packageDir, "point.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	writeErr := errors.New("write failed")
+	err := GenerateType(packageDir, "Point", failingWriter{err: writeErr})
+	if !errors.Is(err, writeErr) {
+		t.Fatalf("got error %v, want %v", err, writeErr)
+	}
+}

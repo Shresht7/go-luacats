@@ -17,12 +17,17 @@ func fieldDescription(field *ast.Field) string {
 }
 
 // Write a type annotation line
-func writeTypeAnnotation(w io.Writer, tag, name, luaType, desc string) {
-	fmt.Fprintf(w, "%s %s %s", tag, name, luaType)
-	if desc != "" {
-		fmt.Fprintf(w, " %s", desc)
+func writeTypeAnnotation(w io.Writer, tag, name, luaType, desc string) error {
+	if _, err := fmt.Fprintf(w, "%s %s %s", tag, name, luaType); err != nil {
+		return err
 	}
-	fmt.Fprintln(w)
+	if desc != "" {
+		if _, err := fmt.Fprintf(w, " %s", desc); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprintln(w)
+	return err
 }
 
 // Attach doc comments to fields if missing

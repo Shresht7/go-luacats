@@ -2,7 +2,7 @@
 
 Generate [LuaCATS][LuaCATS] (_Lua Comments and Type System_) docstrings from [Go][Go] code.
 
-Uses Go's built-in `go/parser` and `go/ast` packages to read [Go][Go] source code and extract type definitions and output formatted [LuaCATS][LuaCATS] definitions.
+Uses Go's built-in `go/parser` and `go/ast` packages to read Go source code and extract type definitions and output formatted LuaCATS definitions.
 
 > [!IMPORTANT]
 > Currently, the generator emits annotations for exported `functions` and `methods`, exported `struct` types, and exported `struct fields`. 
@@ -77,7 +77,7 @@ To pin to a specific version, replace `@latest` with the desired version (e.g., 
 ### Command Line
 
 ```sh
-go-luacats <source> [target]
+go-luacats <source> [target] [--type package.Type ...]
 ```
 
 Use `-h` or `--help` for help and `-v` or `--version` for version:
@@ -95,11 +95,16 @@ If `target` is provided:
 - For a Go file, `target` is the output `.lua` file
 - For a directory, `target` is the output directory; one `.lua` file per `.go` source file.
 
+With `--type`, `source` is the Go module root and `target` is required. Each selector uses a package path relative to `source`
+followed by a type name (e.g., `pkg.Type`). Repeat `--type` to select multiple types. The output directory mirrors the package paths, with
+one `.lua` file per selected type. `--type` can appear before or after positional arguments.
+
 ```sh
 go-luacats path/to/file.go
 go-luacats path/to/file.go output.lua
 go-luacats path/to/directory/
 go-luacats path/to/directory/ generated/
+go-luacats path/to/module generated/ --type internal/action.MyType --type internal/action.OtherType
 ```
 
 When a target directory is provided, processing is **non-recursive** and generates one Lua file per top-level Go file.
