@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+var version = "0.1.0"
+
 // the main entrypoint of the cli
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
@@ -19,7 +21,12 @@ func run(args []string, stdout io.Writer) error {
 
 	// Show help if requested
 	if len(args) > 0 && (args[0] == "-h" || args[0] == "--help") {
-		return help(stdout)
+		return showHelp(stdout)
+	}
+
+	// Show version if requested
+	if len(args) > 0 && (args[0] == "-v" || args[0] == "--version") {
+		return showVersion(stdout)
 	}
 
 	// Require at least one argument
@@ -51,8 +58,8 @@ func run(args []string, stdout io.Writer) error {
 	return err
 }
 
-// prints help message to the writer
-func help(w io.Writer) error {
+// prints showHelp message to the writer
+func showHelp(w io.Writer) error {
 	_, err := fmt.Fprintf(w, `Usage: go-luacats <source> [target]
 
 Generate LuaCATS definitions from a Go source file or directory.
@@ -62,5 +69,11 @@ With a target, a source file generates one Lua file; a directory generates one L
 
 Caution: Existing output files are overwritten.
 `)
+	return err
+}
+
+// prints showVersion info
+func showVersion(w io.Writer) error {
+	_, err := fmt.Fprintf(w, "go-luacats %s\n", version)
 	return err
 }
