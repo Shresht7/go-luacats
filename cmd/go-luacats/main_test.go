@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -128,5 +129,46 @@ func TestRunRejectsEmptyTarget(t *testing.T) {
 
 	if string(got) != "existing output" {
 		t.Fatalf("target changed: %q", got)
+	}
+}
+
+func TestRunHelpAndVersion(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "short help",
+			args: []string{"-h"},
+			want: "Usage: go-luacats <source> [target]",
+		},
+		{
+			name: "long help",
+			args: []string{"--help"},
+			want: "Usage: go-luacats <source> [target]",
+		},
+		{
+			name: "short version",
+			args: []string{"-v"},
+			want: "go-luacats " + version,
+		},
+		{
+			name: "long version",
+			args: []string{"--version"},
+			want: "go-luacats " + version,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			if err := run(test.args, &stdout); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(stdout.String(), test.want) {
+				t.Fatalf("output %q does not contain %q", stdout.String(), test.want)
+			}
+		})
 	}
 }
