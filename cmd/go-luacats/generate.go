@@ -20,14 +20,9 @@ func Generate(source string, target string) error {
 		return fmt.Errorf("Failed to stat source: %w", err)
 	}
 
-	// Resolve target if not explicitly set
+	// Require an explicit target for file output
 	if target == "" {
-		if info.IsDir() {
-			target = source
-		} else {
-			baseName := strings.TrimSuffix(source, ".go")
-			target = baseName + ".lua"
-		}
+		return fmt.Errorf("target must not be empty")
 	}
 
 	// Collect the Go source files we need to operate on

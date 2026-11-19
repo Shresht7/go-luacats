@@ -104,3 +104,29 @@ func TestRunWritersDirectoryToStdoutByDefault(t *testing.T) {
 		}
 	}
 }
+
+func TestRunRejectsEmptyTarget(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "example.go")
+	target := filepath.Join(dir, "example.lua")
+	if err := os.WriteFile(source, []byte("package example\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("existing output"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var stdout bytes.Buffer
+	if err := run([]string{source, ""}, &stdout); err == nil {
+		t.Error("expected an error for an empty target")
+	}
+
+	got, err := os.ReadFile(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if string(got) != "existing output" {
+		t.Fatalf("target changed: %q", got)
+	}
+}
