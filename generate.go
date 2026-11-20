@@ -220,14 +220,6 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 						return fmt.Errorf("type %s is not exported", typeName)
 					}
 
-					// Must be a supported type declaration: ident, struct, interface
-					switch typeSpec.Type.(type) {
-					case *ast.Ident, *ast.StructType, *ast.InterfaceType:
-						// Supported declaration kinds
-					default:
-						return fmt.Errorf("unsupported type declaration for %s", typeName)
-					}
-
 					// Must not be declared twice
 					if selectedDecl != nil {
 						return fmt.Errorf("type %s is declared more than once in %s", typeName, packageDir)
@@ -293,23 +285,8 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 		spec := declaration.Specs[0].(*ast.TypeSpec)
 		switch typeSpec := spec.Type.(type) {
 
-		case *ast.Ident:
-			if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
-				return fmt.Errorf("write LuaCATS output: %w", err)
-			}
-			if declaration.Doc != nil {
-				doc := strings.TrimSpace(declaration.Doc.Text())
-				for _, line := range strings.Split(doc, "\n") {
-					if _, err := fmt.Fprintf(dst, "--- %s\n", line); err != nil {
-						return fmt.Errorf("write LuaCATS output: %w", err)
-					}
-				}
-			}
-
-			if _, err := fmt.Fprintf(dst, "---@alias %s %s\n\n", spec.Name.Name, goTypeToLua(typeSpec)); err != nil {
-				return fmt.Errorf("write LuaCATS output: %w", err)
-			}
-			return nil
+		case *ast.StructType:
+			// Structs are handled by processDecls below
 
 		case *ast.InterfaceType:
 			if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
@@ -319,6 +296,9 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 				return fmt.Errorf("write LuaCATS output: %w", err)
 			}
 			return nil
+
+		default:
+			return generateAliasDocs(spec.Name.Name, declaration.Doc, typeSpec, dst)
 		}
 	}
 
@@ -388,5 +368,25 @@ func processDecls(decls []ast.Decl, w io.Writer) error {
 			}
 		}
 	}
+	return nil
+}
+
+func generateAliasDocs(name string, doc *ast.CommentGroup, typ ast.Expr, dst io.Writer) error {
+	if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
+		return fmt.Errorf("write LuaCATS output: %w", err)
+	}
+
+	if doc != nil {
+		for _, line := range strings.Split(strings.TrimSpace(doc.Text()), "\n") {
+			if _, err := fmt.Fprintf(dst, "--- %s\n", line); err != nil {
+				return fmt.Errorf("write LuaCATS output: %w", err)
+			}
+		}
+	}
+
+	if _, err := fmt.Fprintf(dst, "---@alias %s %s\n\n", name, goTypeToLua(typ)); err != nil {
+		return fmt.Errorf("write LuaCATS output: %w", err)
+	}
+
 	return nil
 }

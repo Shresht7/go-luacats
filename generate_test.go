@@ -552,3 +552,42 @@ type Status int
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateSymbolCompositeTypeAliases(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+	
+type Names []string
+type Lookup map[string]int
+`
+
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		symbol string
+		want   string
+	}{
+		{
+			symbol: "Names",
+			want:   "---@meta\n\n---@alias Names string[]\n\n",
+		},
+		{
+			symbol: "Lookup",
+			want:   "---@meta\n\n---@alias Lookup table<string,integer>\n\n",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.symbol, func(t *testing.T) {
+			var output bytes.Buffer
+			if err := GenerateSymbol(packageDir, test.symbol, &output); err != nil {
+				t.Fatal(err)
+			}
+			if got := output.String(); got != test.want {
+				t.Fatalf("generated output:\n%s\nwant:\n%s", got, test.want)
+			}
+		})
+	}
+}
