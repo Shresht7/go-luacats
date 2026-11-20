@@ -280,28 +280,6 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 		return fmt.Errorf("exported symbol %s not found in %s", typeName, packageDir)
 	}
 
-	// Handle interfaces
-	if declaration, ok := selectedDecl.(*ast.GenDecl); ok {
-		spec := declaration.Specs[0].(*ast.TypeSpec)
-		switch typeSpec := spec.Type.(type) {
-
-		case *ast.StructType:
-			// Structs are handled by processDecls below
-
-		case *ast.InterfaceType:
-			if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
-				return fmt.Errorf("write LuaCATS output: %w", err)
-			}
-			if err := generateInterfaceDocs(spec.Name.Name, declaration.Doc, typeSpec, dst); err != nil {
-				return fmt.Errorf("write LuaCATS output: %w", err)
-			}
-			return nil
-
-		default:
-			return generateAliasDocs(spec.Name.Name, declaration.Doc, typeSpec, dst)
-		}
-	}
-
 	// Consolidate decls and methods into one list
 	decls := []ast.Decl{selectedDecl}
 	for _, method := range methods {
@@ -346,21 +324,35 @@ func receiverTypeName(decl *ast.FuncDecl) string {
 	return ""
 }
 
-// Handles the extraction and generation process
+// Renders LuaCATS for decls
 func processDecls(decls []ast.Decl, w io.Writer) error {
+
+	// Write the `---@meta` header
 	if _, err := fmt.Fprintf(w, "---@meta\n\n"); err != nil {
 		return err
 	}
 
-	// Iterate through all top-level declarations in the file
+	// Process each declaration
 	for _, decl := range decls {
 		switch d := decl.(type) {
 
 		// Generic Declarations: Types, Structs, Consts, Vars
 		case *ast.GenDecl:
-			if err := generateStructDocs(d, w); err != nil {
-				return err
+			// skip non-type declarations
+			if d.Tok != token.TYPE {
+				continue
 			}
+
+			for _, spec := range d.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				if err := generateTypeDocs(d, typeSpec, w); err != nil {
+					return err
+				}
+			}
+
 		// Function Declarations: (standalone functions and methods)
 		case *ast.FuncDecl:
 			if err := generateFuncDocs(d, w); err != nil {
@@ -371,20 +363,45 @@ func processDecls(decls []ast.Decl, w io.Writer) error {
 	return nil
 }
 
-func generateAliasDocs(name string, doc *ast.CommentGroup, typ ast.Expr, dst io.Writer) error {
-	if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
-		return fmt.Errorf("write LuaCATS output: %w", err)
+func generateTypeDocs(decl *ast.GenDecl, spec *ast.TypeSpec, w io.Writer) error {
+	if !spec.Name.IsExported() {
+		return nil
 	}
 
+	doc := decl.Doc
+	if spec.Doc != nil {
+		doc = spec.Doc
+	}
+
+	switch t := spec.Type.(type) {
+
+	case *ast.StructType:
+		singleTypeDecl := &ast.GenDecl{
+			Doc:   doc,
+			Tok:   decl.Tok,
+			Specs: []ast.Spec{spec},
+		}
+		return generateStructDocs(singleTypeDecl, w)
+
+	case *ast.InterfaceType:
+		return generateInterfaceDocs(spec.Name.Name, doc, t, w)
+
+	default:
+		return generateAliasDocs(spec.Name.Name, doc, t, w)
+
+	}
+}
+
+func generateAliasDocs(name string, doc *ast.CommentGroup, t ast.Expr, dst io.Writer) error {
 	if doc != nil {
-		for _, line := range strings.Split(strings.TrimSpace(doc.Text()), "\n") {
+		for line := range strings.SplitSeq(strings.TrimSpace(doc.Text()), "\n") {
 			if _, err := fmt.Fprintf(dst, "--- %s\n", line); err != nil {
 				return fmt.Errorf("write LuaCATS output: %w", err)
 			}
 		}
 	}
 
-	if _, err := fmt.Fprintf(dst, "---@alias %s %s\n\n", name, goTypeToLua(typ)); err != nil {
+	if _, err := fmt.Fprintf(dst, "---@alias %s %s\n\n", name, goTypeToLua(t)); err != nil {
 		return fmt.Errorf("write LuaCATS output: %w", err)
 	}
 

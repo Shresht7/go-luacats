@@ -198,8 +198,6 @@ type Point struct {
 	X, Y int
 	hidden string
 }
-
-type Alias string
 `)
 
 	var output bytes.Buffer
@@ -589,5 +587,37 @@ type Lookup map[string]int
 				t.Fatalf("generated output:\n%s\nwant:\n%s", got, test.want)
 			}
 		})
+	}
+}
+
+func TestGenerateInterfacesAndAliases(t *testing.T) {
+	source := strings.NewReader(`package api
+
+// Status is a state.
+type Status int
+
+// Notifier sends notifications.
+type Notifier interface {
+	Notify(message string) bool
+}
+`)
+
+	var output bytes.Buffer
+	if err := Generate("api.go", source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Status is a state.\n" +
+		"---@alias Status integer\n\n" +
+		"--- Notifier sends notifications.\n" +
+		"---@class Notifier\n" +
+		"local Notifier = {}\n\n" +
+		"---@param message string\n" +
+		"---@return boolean\n" +
+		"function Notifier:Notify(message) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
