@@ -493,3 +493,36 @@ func (o *Other) Save (path string) error {
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateSymbolInterface(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+	
+// Notifier sends messages
+type Notifier interface {
+	Notify(message string) bool
+	private()
+}
+`
+
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Notifier", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Notifier sends messages\n" +
+		"---@class Notifier\n" +
+		"local Notifier = {}\n\n" +
+		"---@param message string\n" +
+		"---@return boolean\n" +
+		"function Notifier:Notify(message) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}

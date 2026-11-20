@@ -221,9 +221,12 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 						return fmt.Errorf("type %s is not exported", typeName)
 					}
 
-					// Must be a struct
-					if _, ok := typeSpec.Type.(*ast.StructType); !ok {
-						return fmt.Errorf("type %s is not a struct", typeName)
+					// Must be struct or interface
+					switch typeSpec.Type.(type) {
+					case *ast.StructType, *ast.InterfaceType:
+						// Supported declaration kinds
+					default:
+						return fmt.Errorf("type %s is not a struct or interface", typeName)
 					}
 
 					// Must not be declared twice
@@ -284,6 +287,20 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 	// If no symbol found
 	if selectedDecl == nil {
 		return fmt.Errorf("exported symbol %s not found in %s", typeName, packageDir)
+	}
+
+	// Handle interfaces
+	if declaration, ok := selectedDecl.(*ast.GenDecl); ok {
+		spec := declaration.Specs[0].(*ast.TypeSpec)
+		if iface, ok := spec.Type.(*ast.InterfaceType); ok {
+			if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
+				return fmt.Errorf("write LuaCATS otuput: %w", err)
+			}
+			if err := generateInterfaceDocs(spec.Name.Name, declaration.Doc, iface, dst); err != nil {
+				return fmt.Errorf("write LuaCATS output: %w", err)
+			}
+			return nil
+		}
 	}
 
 	// Consolidate decls and methods into one list
