@@ -132,9 +132,9 @@ func GenerateFileFromFile(source, target string) (err error) {
 	return nil
 }
 
-// GenerateType writes LuaCATS definitions for an exported struct and its
-// exported methods from a Go package directory. It does not close dst.
-func GenerateType(packageDir, typeName string, dst io.Writer) error {
+// GenerateSymbol writes LuaCATS definitions for a given symbol.
+// GenerateSymbol does not close dst.
+func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 
 	// Check package directory exists and is a directory
 	info, err := os.Stat(packageDir)
@@ -154,8 +154,16 @@ func GenerateType(packageDir, typeName string, dst io.Writer) error {
 	// Parse all Go files for the type and its methods
 	fset := token.NewFileSet()
 	var packageName string
-	var selectedDecl *ast.GenDecl
+	var selectedDecl ast.Decl
 	var methods []*ast.FuncDecl
+
+	// Parse method selector if any
+	receiverName, methodName, isMethod := strings.Cut(typeName, ".")
+	if isMethod && (receiverName == "" || methodName == "" || strings.Contains(methodName, ".")) {
+		return fmt.Errorf("invalid method selector %q", typeName)
+	}
+
+	// Loop through files
 	for _, entry := range entries {
 		name := entry.Name()
 
@@ -212,11 +220,6 @@ func GenerateType(packageDir, typeName string, dst io.Writer) error {
 						return fmt.Errorf("type %s is not exported", typeName)
 					}
 
-					// Must be a struct
-					if _, ok := typeSpec.Type.(*ast.StructType); !ok {
-						return fmt.Errorf("type %s is not a struct", typeName)
-					}
-
 					// Must not be declared twice
 					if selectedDecl != nil {
 						return fmt.Errorf("type %s is declared more than once in %s", typeName, packageDir)
@@ -237,17 +240,44 @@ func GenerateType(packageDir, typeName string, dst io.Writer) error {
 				}
 
 			case *ast.FuncDecl:
-				// Collect methods for the type
-				if receiverTypeName(d) == typeName {
+				// Handle method selector
+				if isMethod {
+					if d.Recv != nil && receiverTypeName(d) == receiverName && d.Name.Name == methodName {
+						if !d.Name.IsExported() {
+							return fmt.Errorf("method %s is not exported", typeName)
+						}
+						if selectedDecl != nil {
+							return fmt.Errorf("symbol %s is declared more than once in %s", typeName, packageDir)
+						}
+						selectedDecl = d
+					}
+					continue
+				}
+
+				// Select a top-level function by name
+				if d.Recv == nil && d.Name.Name == typeName {
+					if !d.Name.IsExported() {
+						return fmt.Errorf("func %s is not exported", typeName)
+					}
+					if selectedDecl != nil {
+						return fmt.Errorf("symbol %s is declared more than once in %s", typeName, packageDir)
+					}
+					selectedDecl = d
+					continue
+				}
+
+				// Collect methods when the selected symbol is their receiver type
+				if d.Recv != nil && receiverTypeName(d) == typeName {
 					methods = append(methods, d)
 				}
+
 			}
 		}
 	}
 
-	// If no struct found
+	// If no symbol found
 	if selectedDecl == nil {
-		return fmt.Errorf("exported struct %s not found in %s", typeName, packageDir)
+		return fmt.Errorf("exported symbol %s not found in %s", typeName, packageDir)
 	}
 
 	// Consolidate decls and methods into one list
@@ -294,21 +324,35 @@ func receiverTypeName(decl *ast.FuncDecl) string {
 	return ""
 }
 
-// Handles the extraction and generation process
+// Renders LuaCATS for decls
 func processDecls(decls []ast.Decl, w io.Writer) error {
+
+	// Write the `---@meta` header
 	if _, err := fmt.Fprintf(w, "---@meta\n\n"); err != nil {
 		return err
 	}
 
-	// Iterate through all top-level declarations in the file
+	// Process each declaration
 	for _, decl := range decls {
 		switch d := decl.(type) {
 
 		// Generic Declarations: Types, Structs, Consts, Vars
 		case *ast.GenDecl:
-			if err := generateStructDocs(d, w); err != nil {
-				return err
+			// skip non-type declarations
+			if d.Tok != token.TYPE {
+				continue
 			}
+
+			for _, spec := range d.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok {
+					continue
+				}
+				if err := generateTypeDocs(d, typeSpec, w); err != nil {
+					return err
+				}
+			}
+
 		// Function Declarations: (standalone functions and methods)
 		case *ast.FuncDecl:
 			if err := generateFuncDocs(d, w); err != nil {
@@ -316,5 +360,50 @@ func processDecls(decls []ast.Decl, w io.Writer) error {
 			}
 		}
 	}
+	return nil
+}
+
+func generateTypeDocs(decl *ast.GenDecl, spec *ast.TypeSpec, w io.Writer) error {
+	if !spec.Name.IsExported() {
+		return nil
+	}
+
+	doc := decl.Doc
+	if spec.Doc != nil {
+		doc = spec.Doc
+	}
+
+	switch t := spec.Type.(type) {
+
+	case *ast.StructType:
+		singleTypeDecl := &ast.GenDecl{
+			Doc:   doc,
+			Tok:   decl.Tok,
+			Specs: []ast.Spec{spec},
+		}
+		return generateStructDocs(singleTypeDecl, w)
+
+	case *ast.InterfaceType:
+		return generateInterfaceDocs(spec.Name.Name, doc, t, w)
+
+	default:
+		return generateAliasDocs(spec.Name.Name, doc, t, w)
+
+	}
+}
+
+func generateAliasDocs(name string, doc *ast.CommentGroup, t ast.Expr, dst io.Writer) error {
+	if doc != nil {
+		for line := range strings.SplitSeq(strings.TrimSpace(doc.Text()), "\n") {
+			if _, err := fmt.Fprintf(dst, "--- %s\n", line); err != nil {
+				return fmt.Errorf("write LuaCATS output: %w", err)
+			}
+		}
+	}
+
+	if _, err := fmt.Fprintf(dst, "---@alias %s %s\n\n", name, goTypeToLua(t)); err != nil {
+		return fmt.Errorf("write LuaCATS output: %w", err)
+	}
+
 	return nil
 }

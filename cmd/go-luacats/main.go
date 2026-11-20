@@ -59,7 +59,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 	// Handle stdin as source
 	if source == "-" {
 		if len(selectors) > 0 {
-			return fmt.Errorf("cannot use --type with stdin")
+			return fmt.Errorf("cannot use --symbol with stdin")
 		}
 		if target == "" {
 			return generateStdinToWriter(stdin, stdout)
@@ -74,7 +74,7 @@ func run(args []string, stdin io.Reader, stdout io.Writer) error {
 	// If selectors are given, generate selected types only
 	if len(selectors) > 0 {
 		if target == "" {
-			return fmt.Errorf("a target directory is required with --type")
+			return fmt.Errorf("a target directory is required with --symbol")
 		}
 		if err := generateSelectedTypes(source, target, selectors); err != nil {
 			return err
@@ -109,19 +109,25 @@ func parseArgs(args []string) (positionals, selectors []string, err error) {
 		}
 
 		switch {
-		case arg == "--type" || arg == "-type" || arg == "-t":
+		case arg == "--symbol" || arg == "-symbol" || arg == "-s":
 			if i+1 >= len(args) || args[i+1] == "" {
-				return nil, nil, fmt.Errorf("%s requires a package.Type selector", arg)
+				return nil, nil, fmt.Errorf("%s requires a package.Symbol selector", arg)
 			}
 			selectors = append(selectors, args[i+1])
 			i++
-		case strings.HasPrefix(arg, "--type="):
-			selectors = append(selectors, arg[len("--type="):])
-		case strings.HasPrefix(arg, "-type="):
-			selectors = append(selectors, arg[len("-type="):])
-		case strings.HasPrefix(arg, "-t="):
-			selectors = append(selectors, arg[len("-t="):])
+		case strings.HasPrefix(arg, "--symbol="),
+			strings.HasPrefix(arg, "-symbol="),
+			strings.HasPrefix(arg, "-s="):
+			_, value, _ := strings.Cut(arg, "=")
+			if value == "" {
+				return nil, nil, fmt.Errorf("%s requires a package.Symbol selector", arg)
+			}
+			selectors = append(selectors, value)
 		default:
+			// A lone "-" remains the stdin source. "--" is handled above the switch
+			if arg != "-" && strings.HasPrefix(arg, "-") {
+				return nil, nil, fmt.Errorf("unknown option %q", arg)
+			}
 			positionals = append(positionals, arg)
 		}
 	}
@@ -131,7 +137,7 @@ func parseArgs(args []string) (positionals, selectors []string, err error) {
 
 // returns usage string
 func getUsage() string {
-	return "Usage: go-luacats <source> [target] [--type package.Type ...]"
+	return "Usage: go-luacats <source> [target] [--symbol package.Symbol ...]"
 }
 
 // prints showHelp message to the writer
@@ -145,8 +151,8 @@ Use - as source to read Go source from stdin. Useful when combined with go doc -
 With no target, output is written to stdout.
 With a target, a source file generates one Lua file; a directory generates one Lua file per Go file.
 
-With --type, source is a Go module root and target is a required output directory.
-Repeat --type to generate multiple selected structs and their exported methods.
+With --symbol, source is a Go module root and target is a required output directory.
+Repeat --symbol to generate multiple selected structs and their exported methods.
 
 Caution: Existing output files are overwritten.
 `, getUsage())

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/token"
 	"io"
 	"os"
 	"path/filepath"
@@ -99,7 +100,7 @@ func parseTypeSelector(value string) (typeSelector, error) {
 	// Find last dot separating package and type
 	dot := strings.LastIndex(value, ".")
 	if dot <= 0 || dot == len(value)-1 {
-		return typeSelector{}, fmt.Errorf("invalid type selector %q: expected package.Type", value)
+		return typeSelector{}, fmt.Errorf("invalid type selector %q: expected package.Symbol", value)
 	}
 
 	// Convert package path to filesystem path
@@ -108,8 +109,25 @@ func parseTypeSelector(value string) (typeSelector, error) {
 		return typeSelector{}, fmt.Errorf("invalid package path in selector %q", value)
 	}
 
+	// Check if it's a method selector
+	symbol := value[dot+1:]
+	receiver, method, isMethod := strings.Cut(symbol, ":")
+
+	// Validate method selector if present
+	if isMethod {
+		// Check receiver and method are valid identifiers
+		if !token.IsIdentifier(receiver) || !token.IsIdentifier(method) {
+			return typeSelector{}, fmt.Errorf("invalid method selector %q", value)
+		}
+
+		// GenerateSymbol uses Go-style Type.Method notation
+		symbol = receiver + "." + method
+	} else if !token.IsIdentifier(symbol) {
+		return typeSelector{}, fmt.Errorf("invalid symbol in selector %q", value)
+	}
+
 	// Return selector with package path and type name
-	return typeSelector{packagePath: packagePath, typeName: value[dot+1:]}, nil
+	return typeSelector{packagePath: packagePath, typeName: symbol}, nil
 }
 
 // Generates LuaCATS for selected types only
@@ -133,7 +151,7 @@ func generateSelectedTypes(sourceRoot, target string, values []string) error {
 
 		// Generate LuaCATS for this type
 		var output bytes.Buffer
-		if err := luacats.GenerateType(packageDir, selector.typeName, &output); err != nil {
+		if err := luacats.GenerateSymbol(packageDir, selector.typeName, &output); err != nil {
 			return fmt.Errorf("generate %s: %w", selectorPath(selector), err)
 		}
 

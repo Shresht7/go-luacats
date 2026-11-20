@@ -198,8 +198,6 @@ type Point struct {
 	X, Y int
 	hidden string
 }
-
-type Alias string
 `)
 
 	var output bytes.Buffer
@@ -379,7 +377,7 @@ func helper() {}
 	}
 
 	var output bytes.Buffer
-	if err := GenerateType(packageDir, "Point", &output); err != nil {
+	if err := GenerateSymbol(packageDir, "Point", &output); err != nil {
 		t.Fatal(err)
 	}
 
@@ -408,8 +406,251 @@ type Point struct{}
 	}
 
 	writeErr := errors.New("write failed")
-	err := GenerateType(packageDir, "Point", failingWriter{err: writeErr})
+	err := GenerateSymbol(packageDir, "Point", failingWriter{err: writeErr})
 	if !errors.Is(err, writeErr) {
 		t.Fatalf("got error %v, want %v", err, writeErr)
+	}
+}
+
+func TestGenerateSymbolFunction(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+// Double doubles a value.
+func Double(x int) int {
+	return x * 2
+}
+
+func Other() {}
+
+type Widget struct{}
+
+func (w *Widget) Double(x int) int {
+	return x * 2
+}
+`
+
+	path := filepath.Join(packageDir, "api.go")
+	if err := os.WriteFile(path, []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Double", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Double doubles a value.\n" +
+		"---@param x integer\n" +
+		"---@return integer\n" +
+		"function Double(x) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+
+}
+
+func TestGenerateSymbolMethod(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+type Widget struct{}
+
+// Save stores the widget
+func (w *Widget) Save(path string) error {
+	return nil
+}
+
+func (w *Widget) Reset() {}
+
+type Other struct {}
+
+func (o *Other) Save (path string) error {
+	return nil
+}
+`
+
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Widget.Save", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Save stores the widget\n" +
+		"---@param path string\n" +
+		"---@return any\n" +
+		"function Widget:Save(path) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestGenerateSymbolInterface(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+	
+// Notifier sends messages
+type Notifier interface {
+	Notify(message string) bool
+	private()
+}
+`
+
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Notifier", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Notifier sends messages\n" +
+		"---@class Notifier\n" +
+		"local Notifier = {}\n\n" +
+		"---@param message string\n" +
+		"---@return boolean\n" +
+		"function Notifier:Notify(message) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestGenerateSymbolTypeAlias(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+	
+// Status describes the current state
+type Status int
+`
+
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Status", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Status describes the current state\n" +
+		"---@alias Status integer\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestGenerateSymbolCompositeTypeAliases(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+	
+type Names []string
+type Lookup map[string]int
+`
+
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		symbol string
+		want   string
+	}{
+		{
+			symbol: "Names",
+			want:   "---@meta\n\n---@alias Names string[]\n\n",
+		},
+		{
+			symbol: "Lookup",
+			want:   "---@meta\n\n---@alias Lookup table<string,integer>\n\n",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.symbol, func(t *testing.T) {
+			var output bytes.Buffer
+			if err := GenerateSymbol(packageDir, test.symbol, &output); err != nil {
+				t.Fatal(err)
+			}
+			if got := output.String(); got != test.want {
+				t.Fatalf("generated output:\n%s\nwant:\n%s", got, test.want)
+			}
+		})
+	}
+}
+
+func TestGenerateInterfacesAndAliases(t *testing.T) {
+	source := strings.NewReader(`package api
+
+// Status is a state.
+type Status int
+
+// Notifier sends notifications.
+type Notifier interface {
+	Notify(message string) bool
+}
+`)
+
+	var output bytes.Buffer
+	if err := Generate("api.go", source, &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Status is a state.\n" +
+		"---@alias Status integer\n\n" +
+		"--- Notifier sends notifications.\n" +
+		"---@class Notifier\n" +
+		"local Notifier = {}\n\n" +
+		"---@param message string\n" +
+		"---@return boolean\n" +
+		"function Notifier:Notify(message) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestGenerateSymbolNamedTypeMethod(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+// Status represents a status code.
+type Status int
+
+// String formats the status.
+func (s Status) String() string {
+	return ""
+}
+`
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Status", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Status represents a status code.\n" +
+		"---@alias Status integer\n\n" +
+		"--- String formats the status.\n" +
+		"---@return string\n" +
+		"function Status:String() end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }

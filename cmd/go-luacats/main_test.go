@@ -238,9 +238,9 @@ func TestRunWithSelectedTypes(t *testing.T) {
 	}
 
 	args := []string{
-		"--type", "internal/api.Point",
+		"--symbol", "internal/api.Point",
 		root, target,
-		"--type", "internal/ui.Widget",
+		"--symbol", "internal/ui.Widget",
 	}
 	var stdout bytes.Buffer
 	if err := run(args, nil, &stdout); err != nil {
@@ -315,5 +315,65 @@ func TestRunStdinToFilePreservesTargetOnParseError(t *testing.T) {
 
 	if string(got) != "existing output" {
 		t.Fatalf("target changed: %q", got)
+	}
+}
+
+func TestRunWithSelectedMethodAndFunction(t *testing.T) {
+	root := t.TempDir()
+	packageDir := filepath.Join(root, "internal", "api")
+	target := filepath.Join(t.TempDir(), "generated")
+
+	if err := os.MkdirAll(packageDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	source := `package api
+
+type Widget struct{}
+
+func (w *Widget) Save(path string) error {
+	return nil
+}
+
+func (w *Widget) Reset() {}
+
+func Double(x int) int {
+	return x * 2
+}
+`
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	args := []string{
+		root, target,
+		"--symbol", "internal/api.Widget:Save",
+		"--symbol", "internal/api.Double",
+	}
+	var stdout bytes.Buffer
+	if err := run(args, nil, &stdout); err != nil {
+		t.Fatal(err)
+	}
+
+	wantFiles := map[string]string{
+		"Widget.Save.lua": "---@meta\n\n---@param path string\n---@return any\nfunction Widget:Save(path) end\n\n",
+		"Double.lua":      "---@meta\n\n---@param x integer\n---@return integer\nfunction Double(x) end\n\n",
+	}
+	for name, want := range wantFiles {
+		path := filepath.Join(target, "internal", "api", name)
+		got, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != want {
+			t.Errorf("%s: got %q, want %q", name, got, want)
+		}
+	}
+}
+
+func TestParseArgsRejectsUnknownOption(t *testing.T) {
+	_, _, err := parseArgs([]string{"source", "target", "--unknown"})
+	if err == nil {
+		t.Fatal("expected an error for an unknown object")
 	}
 }
