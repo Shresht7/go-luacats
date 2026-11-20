@@ -621,3 +621,36 @@ type Notifier interface {
 		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
 	}
 }
+
+func TestGenerateSymbolNamedTypeMethod(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+// Status represents a status code.
+type Status int
+
+// String formats the status.
+func (s Status) String() string {
+	return ""
+}
+`
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Status", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Status represents a status code.\n" +
+		"---@alias Status integer\n\n" +
+		"--- String formats the status.\n" +
+		"---@return string\n" +
+		"function Status:String() end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
