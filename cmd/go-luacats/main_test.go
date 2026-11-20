@@ -238,9 +238,9 @@ func TestRunWithSelectedTypes(t *testing.T) {
 	}
 
 	args := []string{
-		"--type", "internal/api.Point",
+		"--symbol", "internal/api.Point",
 		root, target,
-		"--type", "internal/ui.Widget",
+		"--symbol", "internal/ui.Widget",
 	}
 	var stdout bytes.Buffer
 	if err := run(args, nil, &stdout); err != nil {
@@ -347,8 +347,8 @@ func Double(x int) int {
 
 	args := []string{
 		root, target,
-		"--type", "internal/api.Widget:Save",
-		"--type", "internal/api.Double",
+		"--symbol", "internal/api.Widget:Save",
+		"--symbol", "internal/api.Double",
 	}
 	var stdout bytes.Buffer
 	if err := run(args, nil, &stdout); err != nil {

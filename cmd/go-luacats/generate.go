@@ -100,7 +100,7 @@ func parseTypeSelector(value string) (typeSelector, error) {
 	// Find last dot separating package and type
 	dot := strings.LastIndex(value, ".")
 	if dot <= 0 || dot == len(value)-1 {
-		return typeSelector{}, fmt.Errorf("invalid type selector %q: expected package.Type", value)
+		return typeSelector{}, fmt.Errorf("invalid type selector %q: expected package.Symbol", value)
 	}
 
 	// Convert package path to filesystem path
