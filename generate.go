@@ -132,7 +132,7 @@ func GenerateFileFromFile(source, target string) (err error) {
 	return nil
 }
 
-// GenerateSymbol writes LuaCATS definitions for an exported function or struct.
+// GenerateSymbol writes LuaCATS definitions for an exported function, struct, or struct method.
 // For a struct, it includes exported methods from the package's active Go files.
 // GenerateSymbol does not close dst.
 func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
@@ -157,6 +157,14 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 	var packageName string
 	var selectedDecl ast.Decl
 	var methods []*ast.FuncDecl
+
+	// Parse method selector if any
+	receiverName, methodName, isMethod := strings.Cut(typeName, ".")
+	if isMethod && (receiverName == "" || methodName == "" || strings.Contains(methodName, ".")) {
+		return fmt.Errorf("invalid method selector %q", typeName)
+	}
+
+	// Loop through files
 	for _, entry := range entries {
 		name := entry.Name()
 
@@ -238,6 +246,20 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 				}
 
 			case *ast.FuncDecl:
+				// Handle method selector
+				if isMethod {
+					if d.Recv != nil && receiverTypeName(d) == receiverName && d.Name.Name == methodName {
+						if !d.Name.IsExported() {
+							return fmt.Errorf("method %s is not exported", typeName)
+						}
+						if selectedDecl != nil {
+							return fmt.Errorf("symbol %s is declared more than once in %s", typeName, packageDir)
+						}
+						selectedDecl = d
+					}
+					continue
+				}
+
 				// Select a top-level function by name
 				if d.Recv == nil && d.Name.Name == typeName {
 					if !d.Name.IsExported() {

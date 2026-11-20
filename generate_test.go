@@ -453,3 +453,43 @@ func (w *Widget) Double(x int) int {
 	}
 
 }
+
+func TestGenerateSymbolMethod(t *testing.T) {
+	packageDir := t.TempDir()
+	source := `package api
+
+type Widget struct{}
+
+// Save stores the widget
+func (w *Widget) Save(path string) error {
+	return nil
+}
+
+func (w *Widget) Reset() {}
+
+type Other struct {}
+
+func (o *Other) Save (path string) error {
+	return nil
+}
+`
+
+	if err := os.WriteFile(filepath.Join(packageDir, "api.go"), []byte(source), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	if err := GenerateSymbol(packageDir, "Widget.Save", &output); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "---@meta\n\n" +
+		"--- Save stores the widget\n" +
+		"---@param path string\n" +
+		"---@return any\n" +
+		"function Widget:Save(path) end\n\n"
+
+	if got := output.String(); got != want {
+		t.Fatalf("generated output:\n%s\nwant:\n%s", got, want)
+	}
+}
