@@ -119,3 +119,47 @@ func TestGenerateDirectory(t *testing.T) {
 		}
 	}
 }
+
+func TestParseTypeSelector(t *testing.T) {
+	tests := []struct {
+		input       string
+		packagePath string
+		typeName    string
+		wantError   bool
+	}{
+		{"internal/api.Widget", filepath.Join("internal", "api"), "Widget", false},
+		{"internal/api.Widget:Save", filepath.Join("internal", "api"), "Widget.Save", false},
+		{"internal/api.Double", filepath.Join("internal", "api"), "Double", false},
+
+		// A package directory may itself contain a dot.
+		{"internal/api.v2.Widget:Save", filepath.Join("internal", "api.v2"), "Widget.Save", false},
+
+		{"internal/api.Widget:", "", "", true},
+		{"internal/api.:Save", "", "", true},
+		{"internal/api.Widget:Save:Again", "", "", true},
+		{"../api.Widget:Save", "", "", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+
+			got, err := parseTypeSelector(test.input)
+
+			if test.wantError {
+				if err == nil {
+					t.Fatal("expected an error")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if got.packagePath != test.packagePath || got.typeName != test.typeName {
+				t.Fatalf("got %+v, want package %q and symbol %q", got, test.packagePath, test.typeName)
+			}
+
+		})
+	}
+}

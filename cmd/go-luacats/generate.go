@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"go/token"
 	"io"
 	"os"
 	"path/filepath"
@@ -108,8 +109,25 @@ func parseTypeSelector(value string) (typeSelector, error) {
 		return typeSelector{}, fmt.Errorf("invalid package path in selector %q", value)
 	}
 
+	// Check if it's a method selector
+	symbol := value[dot+1:]
+	receiver, method, isMethod := strings.Cut(symbol, ":")
+
+	// Validate method selector if present
+	if isMethod {
+		// Check receiver and method are valid identifiers
+		if !token.IsIdentifier(receiver) || !token.IsIdentifier(method) {
+			return typeSelector{}, fmt.Errorf("invalid method selector %q", value)
+		}
+
+		// GenerateSymbol uses Go-style Type.Method notation
+		symbol = receiver + "." + method
+	} else if !token.IsIdentifier(symbol) {
+		return typeSelector{}, fmt.Errorf("invalid symbol in selector %q", value)
+	}
+
 	// Return selector with package path and type name
-	return typeSelector{packagePath: packagePath, typeName: value[dot+1:]}, nil
+	return typeSelector{packagePath: packagePath, typeName: symbol}, nil
 }
 
 // Generates LuaCATS for selected types only
