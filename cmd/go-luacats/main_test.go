@@ -370,3 +370,10 @@ func Double(x int) int {
 		}
 	}
 }
+
+func TestParseArgsRejectsUnknownOption(t *testing.T) {
+	_, _, err := parseArgs([]string{"source", "target", "--unknown"})
+	if err == nil {
+		t.Fatal("expected an error for an unknown object")
+	}
+}

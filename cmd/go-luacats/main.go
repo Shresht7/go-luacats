@@ -115,13 +115,19 @@ func parseArgs(args []string) (positionals, selectors []string, err error) {
 			}
 			selectors = append(selectors, args[i+1])
 			i++
-		case strings.HasPrefix(arg, "--type="):
-			selectors = append(selectors, arg[len("--type="):])
-		case strings.HasPrefix(arg, "-type="):
-			selectors = append(selectors, arg[len("-type="):])
-		case strings.HasPrefix(arg, "-t="):
-			selectors = append(selectors, arg[len("-t="):])
+		case strings.HasPrefix(arg, "--type="),
+			strings.HasPrefix(arg, "-type="),
+			strings.HasPrefix(arg, "-t="):
+			_, value, _ := strings.Cut(arg, "=")
+			if value == "" {
+				return nil, nil, fmt.Errorf("%s requires a package.Type selector", arg)
+			}
+			selectors = append(selectors, value)
 		default:
+			// A lone "-" remains the stdin source. "--" is handled above the switch
+			if arg != "-" && strings.HasPrefix(arg, "-") {
+				return nil, nil, fmt.Errorf("unknown option %q", arg)
+			}
 			positionals = append(positionals, arg)
 		}
 	}
