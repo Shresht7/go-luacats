@@ -132,8 +132,7 @@ func GenerateFileFromFile(source, target string) (err error) {
 	return nil
 }
 
-// GenerateSymbol writes LuaCATS definitions for an exported function, struct, or struct method.
-// For a struct, it includes exported methods from the package's active Go files.
+// GenerateSymbol writes LuaCATS definitions for a given symbol.
 // GenerateSymbol does not close dst.
 func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 
@@ -221,12 +220,12 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 						return fmt.Errorf("type %s is not exported", typeName)
 					}
 
-					// Must be struct or interface
+					// Must be a supported type declaration: ident, struct, interface
 					switch typeSpec.Type.(type) {
-					case *ast.StructType, *ast.InterfaceType:
+					case *ast.Ident, *ast.StructType, *ast.InterfaceType:
 						// Supported declaration kinds
 					default:
-						return fmt.Errorf("type %s is not a struct or interface", typeName)
+						return fmt.Errorf("unsupported type declaration for %s", typeName)
 					}
 
 					// Must not be declared twice
@@ -292,11 +291,31 @@ func GenerateSymbol(packageDir, typeName string, dst io.Writer) error {
 	// Handle interfaces
 	if declaration, ok := selectedDecl.(*ast.GenDecl); ok {
 		spec := declaration.Specs[0].(*ast.TypeSpec)
-		if iface, ok := spec.Type.(*ast.InterfaceType); ok {
+		switch typeSpec := spec.Type.(type) {
+
+		case *ast.Ident:
 			if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
-				return fmt.Errorf("write LuaCATS otuput: %w", err)
+				return fmt.Errorf("write LuaCATS output: %w", err)
 			}
-			if err := generateInterfaceDocs(spec.Name.Name, declaration.Doc, iface, dst); err != nil {
+			if declaration.Doc != nil {
+				doc := strings.TrimSpace(declaration.Doc.Text())
+				for _, line := range strings.Split(doc, "\n") {
+					if _, err := fmt.Fprintf(dst, "--- %s\n", line); err != nil {
+						return fmt.Errorf("write LuaCATS output: %w", err)
+					}
+				}
+			}
+
+			if _, err := fmt.Fprintf(dst, "---@alias %s %s\n\n", spec.Name.Name, goTypeToLua(typeSpec)); err != nil {
+				return fmt.Errorf("write LuaCATS output: %w", err)
+			}
+			return nil
+
+		case *ast.InterfaceType:
+			if _, err := fmt.Fprint(dst, "---@meta\n\n"); err != nil {
+				return fmt.Errorf("write LuaCATS output: %w", err)
+			}
+			if err := generateInterfaceDocs(spec.Name.Name, declaration.Doc, typeSpec, dst); err != nil {
 				return fmt.Errorf("write LuaCATS output: %w", err)
 			}
 			return nil
